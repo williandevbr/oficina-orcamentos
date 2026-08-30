@@ -61,8 +61,15 @@ export function AuthProvider({ children }) {
   }
 
   async function cadastrar(email, senha) {
-    const { error } = await supabase.auth.signUp({ email, password: senha });
+    // O Supabase pode responder de duas formas:
+    // 1) usuário já logado direto (confirmação de e-mail desligada)
+    // 2) usuário criado, aguardando confirmar a conta pelo e-mail (session vem nula)
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: senha,
+    });
     if (error) throw new Error(traduzirErroAuth(error.message));
+    return data;
   }
 
   async function recuperarSenha(email) {

@@ -42,7 +42,14 @@ export default function Login() {
       if (aba === "entrar") {
         await entrar(email.trim(), senha);
       } else {
-        await cadastrar(email.trim(), senha);
+        const resultado = await cadastrar(email.trim(), senha);
+        if (!resultado?.session) {
+          // A conta foi criada, mas o Supabase pede confirmação por e-mail
+          setMsgOk(
+            "Conta criada! Enviamos um e-mail de confirmação. Abra sua caixa de entrada, clique no link e depois entre com seus dados.",
+          );
+          setSenha("");
+        }
       }
     } catch (erro) {
       setMsgErro(erro.message);
