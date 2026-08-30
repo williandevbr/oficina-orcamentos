@@ -1,10 +1,34 @@
 import { Users, FileText, CheckCircle2, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
 import StatsCard from "../components/StatsCard.jsx";
 
-// Página inicial: mostra um resumo da oficina.
-// Por enquanto os números são de exemplo (dados fictícios).
-// Na próxima etapa eles virão do Supabase (banco de dados).
+// ============================================================
+// Página inicial: mostra um resumo da oficina com números REAIS
+// vindos do nosso servidor (que busca no Supabase).
+// ============================================================
+
 export default function Dashboard() {
+  const [resumo, setResumo] = useState({
+    clientes: 0,
+    orcamentos: 0,
+    aprovados: 0,
+    pendentes: 0,
+  });
+
+  // Busca os números quando a página abre
+  useEffect(() => {
+    async function carregar() {
+      try {
+        const resp = await fetch("/api/resumo");
+        const dados = await resp.json();
+        setResumo(dados);
+      } catch {
+        // mantém zeros se o servidor estiver offline
+      }
+    }
+    carregar();
+  }, []);
+
   return (
     <div>
       <div className="mb-8">
@@ -15,23 +39,28 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <StatsCard
           title="Clientes cadastrados"
-          value="0"
+          value={resumo.clientes}
           icon={Users}
           color="blue"
         />
         <StatsCard
           title="Orçamentos criados"
-          value="0"
+          value={resumo.orcamentos}
           icon={FileText}
           color="violet"
         />
         <StatsCard
           title="Aprovados"
-          value="0"
+          value={resumo.aprovados}
           icon={CheckCircle2}
           color="green"
         />
-        <StatsCard title="Pendentes" value="0" icon={Clock} color="orange" />
+        <StatsCard
+          title="Pendentes"
+          value={resumo.pendentes}
+          icon={Clock}
+          color="orange"
+        />
       </div>
 
       <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
@@ -39,8 +68,7 @@ export default function Dashboard() {
           Bem-vindo ao OrcaPro
         </h3>
         <p className="mt-2 text-slate-500">
-          Em breve aqui aparecerão os últimos orçamentos e a movimentação da
-          oficina.
+          Cadastre um cliente em "Clientes" para começar a usar o sistema.
         </p>
       </div>
     </div>
