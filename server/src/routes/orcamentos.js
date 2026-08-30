@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { supabase } from "../lib/supabase.js";
 import { calcularTotais } from "../services/calculo.js";
+import {
+  validarItens,
+  validarCriacaoOrcamento,
+} from "../services/validacao.js";
 import { gerarPdfOrcamento } from "../services/pdf.js";
 
 // ============================================================
@@ -14,25 +18,6 @@ import { gerarPdfOrcamento } from "../services/pdf.js";
 // ============================================================
 
 const router = Router();
-
-// Função que valida os itens antes de salvar
-function validarItens(itens) {
-  if (!Array.isArray(itens) || itens.length === 0) {
-    return "O orçamento precisa de pelo menos um item (serviço ou peça).";
-  }
-  for (const item of itens) {
-    if (!item.descricao || !item.descricao.trim()) {
-      return "Todo item precisa de uma descrição.";
-    }
-    if (!["servico", "peca"].includes(item.tipo)) {
-      return "O tipo do item deve ser 'servico' ou 'peca'.";
-    }
-    if (Number(item.quantidade) <= 0 || Number(item.valor_unitario) < 0) {
-      return "Quantidade e valor inválidos em um dos itens.";
-    }
-  }
-  return null;
-}
 
 // Se o Supabase não encontrar a linha, ele responde com o código PGRST116
 // Aqui convertemos isso em HTTP 404 ("não encontrado" — o código certo)
