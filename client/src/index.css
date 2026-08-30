@@ -1,0 +1,13 @@
+/* Importa o Tailwind CSS (biblioteca de estilos prontos) */
+@import "tailwindcss";
+
+/* Fonte padrão: usa a fonte do próprio aparelho (rápido e confiável) */
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: #f1f5f9; /* fundo cinza-azulado claro */
+  color: #0f172a; /* texto azul bem escuro */
+}
