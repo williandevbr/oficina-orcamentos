@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { supabase } from "./lib/supabase.js";
+import { autenticar } from "./middlewares/autenticar.js";
 import clientesRouter from "./routes/clientes.js";
 import orcamentosRouter from "./routes/orcamentos.js";
 
@@ -18,6 +19,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 3333;
 
 // Rota de saúde: serve para saber se o servidor está no ar
+// (por isso fica ANTES do porteiro — não precisa de login)
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
@@ -25,6 +27,9 @@ app.get("/api/health", (req, res) => {
     time: new Date().toISOString(),
   });
 });
+
+// Porteiro: a partir daqui, toda rota /api exige um usuário logado
+app.use("/api", autenticar);
 
 // Resumo para o painel inicial (Dashboard)
 // Conta quantos clientes e orçamentos existem no momento
