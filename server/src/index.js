@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { supabase } from "./lib/supabase.js";
 import clientesRouter from "./routes/clientes.js";
+import orcamentosRouter from "./routes/orcamentos.js";
 
 // ============================================================
 // Servidor = o "gerente" do sistema.
@@ -53,6 +54,9 @@ app.get("/api/resumo", async (req, res) => {
 
 // Liga as rotas de clientes ao caminho /api/clientes
 app.use("/api/clientes", clientesRouter);
+
+// Liga as rotas de orçamentos ao caminho /api/orcamentos
+app.use("/api/orcamentos", orcamentosRouter);
 
 app.listen(PORT, () => {
   console.log(`OrcaPro API rodando em http://localhost:${PORT}`);
