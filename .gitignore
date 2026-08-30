@@ -17,3 +17,5 @@ npm-debug.log*
 # Sistema operacional
 .DS_Store
 Thumbs.db
+# Config local da Vercel
+.vercel/
