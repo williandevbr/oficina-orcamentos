@@ -1,0 +1,19 @@
+# Dependências (são baixadas de novo com npm install)
+node_modules/
+
+# Arquivos de build
+dist/
+build/
+
+# Configurações locais com segredos (NUNCA subir pro Git)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
