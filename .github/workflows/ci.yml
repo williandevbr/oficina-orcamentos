@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Testes e build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v5
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Instalar dependências do servidor
+        working-directory: server
+        run: npm ci
+
+      - name: Rodar testes do servidor
+        working-directory: server
+        run: npm test
+
+      - name: Instalar dependências do site
+        working-directory: client
+        run: npm ci
+
+      - name: Rodar testes do site
+        working-directory: client
+        run: npm test
+
+      - name: Gerar o site
+        working-directory: client
+        run: npm run build
