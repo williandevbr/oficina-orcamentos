@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, Wrench } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Wrench, LogOut } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext.jsx";
 
 // Lista de itens do menu.
 // Cada item tem: o caminho (to), o texto (label) e um ícone.
@@ -12,6 +13,8 @@ const links = [
 // Sidebar = menu lateral azul escuro.
 // NavLink marca visualmente o item que está selecionado.
 export default function Sidebar() {
+  const { usuario, sair } = useAuth();
+
   return (
     <aside className="fixed inset-y-0 left-0 flex w-64 flex-col bg-blue-950 text-white">
       {/* Logo do sistema */}
@@ -46,9 +49,23 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Rodapé da sidebar */}
-      <div className="mt-auto px-6 py-5 text-xs text-blue-400">
-        v0.1.0 — em desenvolvimento
+      {/* Usuário logado + sair */}
+      <div className="mt-auto border-t border-blue-900 px-4 py-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-white">
+              {usuario?.email}
+            </p>
+            <p className="text-xs text-blue-400">Logado</p>
+          </div>
+          <button
+            onClick={sair}
+            title="Sair"
+            className="rounded-lg p-2 text-blue-300 transition-colors hover:bg-blue-900 hover:text-white"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );
