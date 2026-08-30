@@ -1,6 +1,7 @@
 import { Users, FileText, CheckCircle2, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 import StatsCard from "../components/StatsCard.jsx";
+import { apiFetch } from "../lib/api.js";
 
 // ============================================================
 // Página inicial: mostra um resumo da oficina com números REAIS
@@ -19,7 +20,7 @@ export default function Dashboard() {
   useEffect(() => {
     async function carregar() {
       try {
-        const resp = await fetch("/api/resumo");
+        const resp = await apiFetch("/api/resumo");
         const dados = await resp.json();
         setResumo(dados);
       } catch {

@@ -1,6 +1,7 @@
 import { Users, Plus, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import ClienteForm from "../components/ClienteForm.jsx";
+import { apiFetch } from "../lib/api.js";
 
 // ============================================================
 // Página de Clientes - CRUD completo
@@ -43,7 +44,7 @@ export default function Clientes() {
 
   async function carregarClientes() {
     try {
-      const resp = await fetch(API);
+      const resp = await apiFetch(API);
       const dados = await resp.json();
       setClientes(dados);
       setErro("");
@@ -77,7 +78,7 @@ export default function Clientes() {
     const metodo = editandoId ? "PUT" : "POST";
 
     try {
-      const resp = await fetch(url, {
+      const resp = await apiFetch(url, {
         method: metodo,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -98,7 +99,7 @@ export default function Clientes() {
 
   async function excluir(id) {
     if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
-    await fetch(`${API}/${id}`, { method: "DELETE" });
+    await apiFetch(`${API}/${id}`, { method: "DELETE" });
     await carregarClientes();
   }
 

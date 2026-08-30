@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FileText, Plus, Pencil, Trash2, FileDown } from "lucide-react";
 import OrcamentoForm from "../components/OrcamentoForm.jsx";
 import { formatarMoeda, formatarData } from "../utils/format.js";
+import { apiFetch } from "../lib/api.js";
 
 // ============================================================
 // Página de ORÇAMENTOS
@@ -52,8 +53,8 @@ export default function Orcamentos() {
   async function carregarTudo() {
     try {
       const [respOrc, respCli] = await Promise.all([
-        fetch(API),
-        fetch(API_CLIENTES),
+        apiFetch(API),
+        apiFetch(API_CLIENTES),
       ]);
       const [listaOrc, listaCli] = await Promise.all([
         respOrc.json(),
@@ -78,7 +79,7 @@ export default function Orcamentos() {
   // Para editar, busca o orçamento completo (com os itens)
   async function abrirEdicao(id) {
     try {
-      const resp = await fetch(`${API}/${id}`);
+      const resp = await apiFetch(`${API}/${id}`);
       const dados = await resp.json();
       setDadosEdicao(dados);
       setErro("");
@@ -93,7 +94,7 @@ export default function Orcamentos() {
     const metodo = dadosEdicao ? "PUT" : "POST";
 
     try {
-      const resp = await fetch(url, {
+      const resp = await apiFetch(url, {
         method: metodo,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -114,8 +115,31 @@ export default function Orcamentos() {
 
   async function excluir(id) {
     if (!confirm("Tem certeza que deseja excluir este orçamento?")) return;
-    await fetch(`${API}/${id}`, { method: "DELETE" });
+    await apiFetch(`${API}/${id}`, { method: "DELETE" });
     await carregarTudo();
+  }
+
+  // Baixa o PDF com autorização (o navegador sozinho não envia o crachá)
+  async function baixarPdf(orc) {
+    try {
+      setErro("");
+      const resp = await apiFetch(`${API}/${orc.id}/pdf`);
+      if (!resp.ok) {
+        setErro("Não foi possível gerar o PDF.");
+        return;
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orcamento-${String(orc.numero).padStart(4, "0")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setErro("Erro de conexão ao gerar o PDF.");
+    }
   }
 
   return (
@@ -194,13 +218,13 @@ export default function Orcamentos() {
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-2">
-                      <a
-                        href={`/api/orcamentos/${orc.id}/pdf`}
+                      <button
+                        onClick={() => baixarPdf(orc)}
                         title="Baixar PDF"
                         className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-blue-100 hover:text-blue-700"
                       >
                         <FileDown className="h-4 w-4" />
-                      </a>
+                      </button>
                       <button
                         onClick={() => abrirEdicao(orc.id)}
                         title="Editar"
