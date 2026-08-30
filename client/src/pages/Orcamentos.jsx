@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FileText, Plus, Pencil, Trash2 } from "lucide-react";
+import { FileText, Plus, Pencil, Trash2, FileDown } from "lucide-react";
 import OrcamentoForm from "../components/OrcamentoForm.jsx";
 import { formatarMoeda, formatarData } from "../utils/format.js";
 
@@ -194,6 +194,13 @@ export default function Orcamentos() {
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-2">
+                      <a
+                        href={`/api/orcamentos/${orc.id}/pdf`}
+                        title="Baixar PDF"
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-blue-100 hover:text-blue-700"
+                      >
+                        <FileDown className="h-4 w-4" />
+                      </a>
                       <button
                         onClick={() => abrirEdicao(orc.id)}
                         title="Editar"

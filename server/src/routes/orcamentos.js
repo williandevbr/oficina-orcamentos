@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { supabase } from "../lib/supabase.js";
 import { calcularTotais } from "../services/calculo.js";
+import { gerarPdfOrcamento } from "../services/pdf.js";
 
 // ============================================================
 // Rotas da API de ORÇAMENTOS
@@ -33,6 +34,12 @@ function validarItens(itens) {
   return null;
 }
 
+// Se o Supabase não encontrar a linha, ele responde com o código PGRST116
+// Aqui convertemos isso em HTTP 404 ("não encontrado" — o código certo)
+function tratarNaoEncontrado(error) {
+  return error?.code === "PGRST116";
+}
+
 // 1. LISTAR todos os orçamentos (com o nome/veículo do cliente)
 router.get("/", async (req, res) => {
   const { data, error } = await supabase
@@ -46,7 +53,45 @@ router.get("/", async (req, res) => {
   res.json(data);
 });
 
-// 2. DETALHE de um orçamento (com todos os itens)
+// 2. BAIXAR PDF - gera o arquivo do orçamento
+// (precisa vir antes de "/:id" para o Express não confundir "pdf" com um id)
+router.get("/:id/pdf", async (req, res) => {
+  const { id } = req.params;
+
+  const { data, error } = await supabase
+    .from("orcamentos")
+    .select(
+      "*, clientes(nome, telefone, email, endereco, veiculo, placa), orcamento_itens(*)",
+    )
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    if (tratarNaoEncontrado(error)) {
+      return res.status(404).json({ message: "Orçamento não encontrado." });
+    }
+    return res.status(400).json({ message: error.message });
+  }
+  if (!data) {
+    return res.status(404).json({ message: "Orçamento não encontrado." });
+  }
+
+  try {
+    // Gera o PDF profissional
+    const buffer = await gerarPdfOrcamento(data);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="orcamento-${String(data.numero).padStart(4, "0")}.pdf"`,
+    );
+    res.send(buffer);
+  } catch (err) {
+    console.error("Erro ao gerar PDF:", err);
+    res.status(500).json({ message: "Erro ao gerar o PDF do orçamento." });
+  }
+});
+
+// 3. DETALHE de um orçamento (com todos os itens)
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -57,6 +102,9 @@ router.get("/:id", async (req, res) => {
     .single();
 
   if (error) {
+    if (tratarNaoEncontrado(error)) {
+      return res.status(404).json({ message: "Orçamento não encontrado." });
+    }
     return res.status(400).json({ message: error.message });
   }
   if (!data) {
@@ -193,6 +241,9 @@ router.put("/:id", async (req, res) => {
     .single();
 
   if (error) {
+    if (tratarNaoEncontrado(error)) {
+      return res.status(404).json({ message: "Orçamento não encontrado." });
+    }
     return res.status(400).json({ message: error.message });
   }
   if (!data) {
