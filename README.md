@@ -1,153 +1,244 @@
-<div align="center">
-
 # OrcaPro
 
-**Sistema profissional de orçamentos para oficinas mecânicas**
-
-Gere orçamentos bonitos e organizados em poucos cliques, com PDF pronto para enviar ao cliente.
-
-[![React](https://img.shields.io/badge/React-19-61DAFB)](https://react.dev)
-[![Node](https://img.shields.io/badge/Node.js-22-339933)](https://nodejs.org)
-[![Supabase](https://img.shields.io/badge/Supabase-2.x-3ECF8E)](https://supabase.com)
-[![Vite](https://img.shields.io/badge/Vite-8-646CFF)](https://vitejs.dev)
-[![Tailwind](https://img.shields.io/badge/Tailwind-4-38BDF8)](https://tailwindcss.com)
-[![Vitest](https://img.shields.io/badge/Vitest-4-6E9F18)](https://vitest.dev)
-[![pdfmake](https://img.shields.io/badge/pdfmake-0.3-A020F0)](https://pdfmake.github.io/docs/)
-
-</div>
+**Sistema para oficinas mecânicas fazerem orçamentos e gerarem PDF profissional.**
 
 ---
 
-## O que é o OrcaPro
+## O que o sistema faz
 
-O OrcaPro é um sistema completo para o dia a dia de uma oficina:
+O OrcaPro resolve o dia a dia de uma oficina mecânica:
 
-1. **Cadastre o cliente** (nome, telefone, veículo, placa)
-2. **Monte o orçamento** adicionando serviços e peças — o total é calculado sozinho
-3. **Baixe um PDF profissional** com o cabeçalho da oficina, a tabela de itens e os totais
-4. **Acompanhe o status** de cada orçamento (rascunho, enviado, aprovado, recusado)
+- **Cadastra clientes** (nome, telefone, carro, placa, observações)
+- **Cria orçamentos** com quantos serviços e peças quiser
+- **Calcula tudo sozinho** — o total, com desconto, aparece na hora
+- **Gera um PDF bonito** com o nome da oficina, os itens e os totais, pronto para mandar ao cliente
+- **Controla o status** de cada orçamento (rascunho, enviado, aprovado, recusado)
+- **Tem login com e-mail e senha** — cada pessoa da oficina entra com o seu acesso
 
-Tudo protegido por **login seguro**, com testes automáticos e implantação contínua.
-
----
-
-## Funcionalidades
-
-| Área       | O que faz                                                                                   |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| Login      | Criação de conta, entrada, sair e recuperação de senha (Supabase Auth)                      |
-| Dashboard  | Painel inicial com os números reais da oficina (clientes, orçamentos, aprovados, pendentes) |
-| Clientes   | Cadastro completo: criar, ver, editar e excluir clientes                                    |
-| Orçamentos | Itens dinâmicos (serviço ou peça), cálculo automático de total e desconto                   |
-| PDF        | Documento profissional com identidade da oficina, pronto para enviar ao cliente             |
-| Segurança  | Toda a API exige um token de acesso (nada é público sem login)                              |
-| Testes     | 23 testes unitários cobrindo cálculo, validações e formatação                               |
-| CI/CD      | Robô no GitHub que roda testes e build a cada envio de código                               |
+O sistema está **no ar na internet** e pronto para usar. Não precisa instalar nada para começar.
 
 ---
 
-## Tecnologias
+## Como usar o sistema
 
-| Camada             | Tecnologia              | Papel                                  |
-| ------------------ | ----------------------- | -------------------------------------- |
-| Site (frontend)    | React 19 + Vite 8       | Interface do usuário                   |
-| Visual             | Tailwind CSS 4 + Lucide | Estilo azul profissional e ícones      |
-| Servidor (backend) | Node.js + Express 5     | API que liga o site ao banco           |
-| Banco de dados     | Supabase (PostgreSQL)   | Guarda clientes, orçamentos e usuários |
-| Autenticação       | Supabase Auth           | Login seguro com e-mail e senha        |
-| PDF                | pdfmake                 | Geração do documento do orçamento      |
-| Testes             | Vitest                  | Testes unitários de regras e cálculo   |
+### Se você quer só usar (a forma mais fácil)
 
----
+1. Abra no navegador: **https://orca-pro-nine.vercel.app**
+2. Crie sua conta com e-mail e senha
+3. Cadastre seus clientes
+4. Crie orçamentos
+5. Baixe o PDF e mande para o cliente
 
-## Arquitetura
+Pronto. O sistema roda em qualquer navegador, no computador ou no celular.
 
-```
-┌─────────────┐   pedidos   ┌─────────────┐   dados   ┌─────────────┐
-│   Site      │ ──────────▶ │  Servidor   │ ────────▶ │  Supabase   │
-│ React/Vite  │             │ Express API │           │ PostgreSQL  │
-│ (porta 5173)│ ◀────────── │ (porta 3333)│ ◀──────── │  (nuvem)    │
-└─────────────┘  respostas  └─────────────┘           └─────────────┘
-```
+### Se você é programador e quer rodar no seu computador
 
-- O **site** conversa com o **servidor** (que repassa tudo para o **Supabase**);
-- O **login** é emitido pelo Supabase e conferido pelo servidor a cada pedido;
-- Em desenvolvimento, o Vite faz a ponte (`proxy`) entre o site e o servidor.
+O sistema tem duas partes: o **site** (a parte que aparece na tela) e o **servidor** (a parte que faz as regras e guarda os dados). Para rodar no seu computador, você vai ligar as duas.
 
----
+#### O que você precisa ter instalado
 
-## Primeiros passos
+- **Node.js versão 22 ou superior** — baixe em https://nodejs.org (escolha a versão LTS)
+- **Git** — baixe em https://git-scm.com
+- **Uma conta gratuita no Supabase** — crie em https://supabase.com (é o lugar onde ficam guardados os dados do sistema)
 
-### Pré-requisitos
+#### Passo 1 — Baixar o projeto
 
-- [Node.js](https://nodejs.org) **22 ou superior**
-- Uma conta gratuita no [Supabase](https://supabase.com) (para o banco e o login)
-
-### 1. Baixar o projeto
+Abra o terminal (no Windows, use o "Prompt de comando" ou "PowerShell"; no Mac ou Linux, use o "Terminal") e digite:
 
 ```bash
 git clone https://github.com/williandevbr/oficina-orcamentos.git
 cd oficina-orcamentos
 ```
 
-### 2. Preparar o banco de dados (Supabase)
+Isso cria uma pasta chamada `oficina-orcamentos` com todo o código do sistema.
 
-1. Crie um projeto no [Supabase](https://supabase.com)
-2. Abra **SQL Editor** no painel e execute o arquivo `supabase/migrations/0001_criar_tabelas_iniciais.sql`
-3. Em **Authentication → Providers → Email**, deixe "Confirm email" **desligado** para o primeiro acesso ser imediato (opcional)
+#### Passo 2 — Criar o banco de dados
 
-### 3. Configurar o servidor
+O sistema precisa de um banco de dados para guardar clientes e orçamentos. Vamos usar o Supabase.
 
-```bash
-cd server
-npm install
-cp .env.example .env   # preencha as chaves no .env (veja a seção Configuração)
-npm run dev
-```
+1. Entre em https://supabase.com e crie um projeto novo (é gratuito)
+2. No painel do projeto, no menu lateral, clique em **SQL Editor**
+3. Clique em **New query**
+4. Abra o arquivo `supabase/migrations/0001_criar_tabelas_iniciais.sql` que está na pasta do projeto (pode abrir no Bloco de Notas ou em qualquer editor de texto)
+5. Copie todo o conteúdo desse arquivo e cole no campo de texto do SQL Editor
+6. Clique no botão **Run** (ou pressione Ctrl+Enter)
 
-O servidor sobe em `http://localhost:3333`.
+Pronto. As três tabelas do sistema (clientes, orçamentos e itens) foram criadas.
 
-### 4. Configurar o site
+#### Passo 3 — Pegar as chaves do Supabase
 
-```bash
-cd client
-npm install
-cp .env.example .env   # preencha as chaves no .env (veja a seção Configuração)
-npm run dev
-```
+Ainda no painel do Supabase:
 
-Abra o site em `http://localhost:5173`, crie sua conta e comece a usar.
+1. No menu lateral, clique em **Settings** (ícone de engrenagem)
+2. Clique em **API**
+3. Você vai ver três informações importantes:
+   - **Project URL** — é o endereço do seu projeto (algo como `https://abc123.supabase.co`)
+   - **anon public key** — uma chave pública bem longa
+   - **service_role key** — outra chave bem longa, essa é **secreta** (não compartilhe)
+
+Deixe essa página aberta. Vamos usar essas informações nos próximos passos.
+
+#### Passo 4 — Ligar o servidor
+
+O servidor é a parte que faz as regras (cálculos, validações) e liga o site ao banco de dados.
+
+1. Ainda no terminal, entre na pasta do servidor:
+   ```bash
+   cd server
+   ```
+2. Instale as dependências (pode demorar 1-2 minutos na primeira vez):
+   ```bash
+   npm install
+   ```
+3. Crie o arquivo de configuração:
+   ```bash
+   cp .env.example .env
+   ```
+4. Abra o arquivo `.env` no seu editor de texto (no Windows, `notepad .env`; no Mac ou Linux, `nano .env`)
+5. Preencha as informações (use os valores que você copiou do Supabase):
+
+   ```
+   SUPABASE_URL=https://abc123.supabase.co
+   SUPABASE_ANON_KEY=cole-aqui-a-chave-anon
+   SUPABASE_SERVICE_ROLE_KEY=cole-aqui-a-chave-service-role
+   OFICINA_NOME=Auto Mecânica do João
+   OFICINA_TELEFONE=(11) 99999-9999
+   OFICINA_ENDERECO=Rua das Oficinas, 123 — São Paulo/SP
+   OFICINA_CNPJ=00.000.000/0001-00
+   ```
+
+   O nome, telefone, endereço e CNPJ da oficina aparecem no PDF. Preencha com os dados da sua oficina.
+
+6. Salve o arquivo e volte ao terminal. Inicie o servidor:
+   ```bash
+   npm run dev
+   ```
+
+O servidor vai mostrar uma mensagem dizendo que está rodando em `http://localhost:3333`. **Deixe essa janela do terminal aberta.**
+
+#### Passo 5 — Ligar o site
+
+Abra **outra janela do terminal** (não feche a do servidor) e digite:
+
+1. Entre na pasta do site:
+   ```bash
+   cd client
+   ```
+2. Instale as dependências:
+   ```bash
+   npm install
+   ```
+3. Crie o arquivo de configuração:
+   ```bash
+   cp .env.example .env
+   ```
+4. Abra o arquivo `.env` no editor e preencha:
+   ```
+   VITE_SUPABASE_URL=https://abc123.supabase.co
+   VITE_SUPABASE_ANON_KEY=cole-aqui-a-chave-anon
+   VITE_API_URL=http://localhost:3333
+   ```
+   (O `VITE_SUPABASE_URL` e o `VITE_SUPABASE_ANON_KEY` são os mesmos valores que você colocou no servidor.)
+5. Salve o arquivo. Inicie o site:
+   ```bash
+   npm run dev
+   ```
+
+O site vai abrir sozinho no navegador em `http://localhost:5173`. **Deixe essa janela do terminal aberta também.**
+
+#### Passo 6 — Entrar no sistema
+
+1. Abra http://localhost:5173 no navegador
+2. Clique em **Criar conta**
+3. Digite seu e-mail e uma senha (com pelo menos 6 caracteres)
+4. Pronto! Você já está dentro do sistema
+
+Agora você pode cadastrar clientes, criar orçamentos e gerar PDFs. Tudo funciona offline, no seu computador.
+
+#### Para parar o sistema
+
+Quando quiser desligar, feche as duas janelas do terminal ou pressione `Ctrl+C` em cada uma.
 
 ---
 
-## Configuração (variáveis de ambiente)
+## Como usar o sistema no dia a dia
+
+### Cadastrar um cliente
+
+1. No menu lateral, clique em **Clientes**
+2. Clique no botão **Novo cliente** (canto superior direito)
+3. Preencha nome, telefone, e-mail, carro e placa
+4. Clique em **Salvar**
+
+### Criar um orçamento
+
+1. No menu lateral, clique em **Orçamentos**
+2. Clique em **Novo orçamento**
+3. Escolha o cliente (ou cadastre um novo, se precisar)
+4. Adicione os itens: para cada serviço ou peça, clique em **Adicionar item** e preencha o que é, a quantidade e o valor
+5. Se quiser dar um desconto, preencha o campo **Desconto**
+6. O **total** é calculado sozinho, embaixo
+7. Clique em **Salvar**
+
+### Gerar o PDF
+
+1. Abra o orçamento que você criou (clique nele na lista)
+2. Clique no botão **Baixar PDF**
+3. O PDF vai ser salvo no seu computador, pronto para mandar ao cliente por WhatsApp ou e-mail
+
+---
+
+## Estrutura do projeto
+
+```
+oficina-orcamentos/
+├── client/              → o site (a parte visual)
+│   ├── src/pages/       → as telas (Login, Painel, Clientes, Orçamentos)
+│   ├── src/components/  → peças reutilizáveis (menu, formulários, cartões)
+│   ├── src/contexts/    → controle do usuário logado
+│   ├── src/lib/         → ligação com o Supabase e com o servidor
+│   └── src/utils/       → funções auxiliares (formatação de moeda)
+├── server/              → o servidor (a parte que faz as regras)
+│   ├── src/routes/      → rotas de clientes, orçamentos e PDF
+│   ├── src/services/    → regras de cálculo, validação e geração de PDF
+│   ├── src/middlewares/ → porteiro que confere o login
+│   ├── src/lib/         → ligação com o Supabase
+│   └── fonts/           → fontes usadas no PDF
+└── supabase/
+    └── migrations/      → arquivo de criação das tabelas do banco
+```
+
+---
+
+## Configurações (variáveis de ambiente)
+
+Essas são as informações que o sistema precisa para funcionar. Todas ficam em arquivos `.env` que **não vão para o Git** (são segredos).
 
 ### Servidor — `server/.env`
 
-| Variável                    | De onde vem                                       | O que faz                                      |
-| --------------------------- | ------------------------------------------------- | ---------------------------------------------- |
-| `SUPABASE_URL`              | Painel do Supabase → Settings → API → Project URL | Endereço do seu projeto                        |
-| `SUPABASE_ANON_KEY`         | Painel → Settings → API → anon public             | Chave pública do cliente                       |
-| `SUPABASE_SERVICE_ROLE_KEY` | Painel → Settings → API → service_role            | Chave de serviço (secreta) usada pelo servidor |
-| `OFICINA_NOME`              | Você escolhe                                      | Nome da oficina (aparece no PDF)               |
-| `OFICINA_TELEFONE`          | Você escolhe                                      | Telefone no rodapé do PDF                      |
-| `OFICINA_ENDERECO`          | Você escolhe                                      | Endereço no rodapé do PDF                      |
-| `OFICINA_CNPJ`              | Você escolhe                                      | CNPJ no rodapé do PDF                          |
+| Campo                       | De onde vem                                        |
+| --------------------------- | -------------------------------------------------- |
+| `SUPABASE_URL`              | Painel do Supabase → Settings → API → Project URL  |
+| `SUPABASE_ANON_KEY`         | Painel do Supabase → Settings → API → anon public  |
+| `SUPABASE_SERVICE_ROLE_KEY` | Painel do Supabase → Settings → API → service_role |
+| `OFICINA_NOME`              | Você escolhe (aparece no PDF)                      |
+| `OFICINA_TELEFONE`          | Você escolhe (aparece no rodapé do PDF)            |
+| `OFICINA_ENDERECO`          | Você escolhe (aparece no rodapé do PDF)            |
+| `OFICINA_CNPJ`              | Você escolhe (aparece no rodapé do PDF)            |
 
 ### Site — `client/.env`
 
-| Variável                 | De onde vem                        | O que faz                        |
-| ------------------------ | ---------------------------------- | -------------------------------- |
-| `VITE_SUPABASE_URL`      | Mesmo valor de `SUPABASE_URL`      | Liga o login do site ao Supabase |
-| `VITE_SUPABASE_ANON_KEY` | Mesmo valor de `SUPABASE_ANON_KEY` | Chave pública usada pelo site    |
-
-> As chaves reais **nunca** vão para o Git. Use os arquivos `.env.example` como modelo.
+| Campo                    | De onde vem                                          |
+| ------------------------ | ---------------------------------------------------- |
+| `VITE_SUPABASE_URL`      | Mesmo valor de `SUPABASE_URL` do servidor            |
+| `VITE_SUPABASE_ANON_KEY` | Mesmo valor de `SUPABASE_ANON_KEY` do servidor       |
+| `VITE_API_URL`           | Endereço do servidor (em produção é a URL do Render) |
 
 ---
 
-## API
+## Rotas do servidor (para programadores)
 
-Toda rota abaixo de `/api` exige o cabeçalho `Authorization: Bearer <token>` (o token é obtido ao entrar no sistema). A única exceção é a verificação de saúde.
+Todas as rotas abaixo de `/api` exigem o cabeçalho `Authorization: Bearer <token>` (o token é obtido ao entrar no sistema). A única exceção é a rota de saúde.
 
 ### Saúde
 
@@ -175,7 +266,7 @@ Toda rota abaixo de `/api` exige o cabeçalho `Authorization: Bearer <token>` (o
 | DELETE | `/api/orcamentos/:id`     | Exclui                                   |
 | GET    | `/api/orcamentos/:id/pdf` | Baixa o PDF do orçamento                 |
 
-Exemplo com `curl`:
+Exemplo de uso com `curl`:
 
 ```bash
 curl -H "Authorization: Bearer SEU_TOKEN" http://localhost:3333/api/clientes
@@ -183,57 +274,41 @@ curl -H "Authorization: Bearer SEU_TOKEN" http://localhost:3333/api/clientes
 
 ---
 
-## Testes
+## Banco de dados (3 tabelas)
 
-Os testes verificam as regras de negócio de forma isolada (cálculo, validação e formatação).
+- **clientes** — guarda os dados de cada cliente (nome, contato, carro, placa)
+- **orcamentos** — guarda o cabeçalho de cada orçamento (cliente, total, desconto, status, data)
+- **orcamento_itens** — guarda cada item de cada orçamento (descrição, quantidade, valor unitário)
 
-```bash
-cd server && npm test    # 17 testes
-cd client && npm test    # 6 testes
-```
-
-No GitHub, **o robô executa todos os testes e o build automaticamente** a cada envio de código — veja o resultado na aba **Actions** do repositório.
+As tabelas são criadas pelo arquivo `supabase/migrations/0001_criar_tabelas_iniciais.sql`.
 
 ---
 
-## Estrutura do projeto
+## Endereços do sistema (já está no ar)
 
-```
-oficina-orcamentos/
-├── .github/workflows/     → automação (testes + build a cada envio)
-├── client/                → site (React + Vite + Tailwind)
-│   ├── src/pages/         → páginas (Login, Dashboard, Clientes, Orçamentos)
-│   ├── src/components/    → peças visuais (menu, formulários, cartões)
-│   ├── src/contexts/      → controle da sessão de login
-│   ├── src/lib/           → ponte com o Supabase e a API
-│   └── src/utils/         → formatadores de moeda e data
-├── server/                → API (Node.js + Express)
-│   ├── src/routes/        → rotas de clientes e orçamentos
-│   ├── src/services/      → regras de cálculo, validação e PDF
-│   ├── src/middlewares/   → porteiro de autenticação
-│   ├── src/lib/           → conexão com o Supabase
-│   └── fonts/             → fontes usadas no PDF (Roboto)
-└── supabase/migrations/   → criação das tabelas do banco
-```
-
----
-
-## Publicação (deploy)
-
-O sistema está publicado na internet e funciona de ponta a ponta:
+O sistema está publicado na internet e funcionando 24 horas por dia:
 
 - **Site:** https://orca-pro-nine.vercel.app
-- **API:** https://orca-api-yezh.onrender.com
-- **Publicação automática (CI/CD):** a cada envio para a branch `main` do GitHub, o robô (GitHub Actions) roda os **testes** e, se tudo passar, **publica o site sozinho** na Vercel. O servidor no Render também atualiza sozinho a cada envio. Nada vai para o ar sem passar pelos testes.
+- **Servidor:** https://orca-api-yezh.onrender.com
 
-> No plano gratuito, o servidor (Render) "adormece" após alguns minutos sem uso; o primeiro acesso depois disso pode demorar de 30 a 60 segundos para "acordar".
+> No plano gratuito, o servidor "adormece" se ficar alguns minutos sem uso. O primeiro acesso depois disso pode demorar de 30 a 60 segundos para "acordar" — depois funciona normalmente.
 
 ---
 
-## Banco de dados
+## Problemas comuns
 
-- **clientes** — dados dos clientes (nome, contato, veículo, placa...)
-- **orcamentos** — orçamentos com número, status, descontos e totais
-- **orcamento_itens** — itens de cada orçamento (serviço ou peça)
+**Esqueci a senha.** Na tela de login, clique em **Esqueci minha senha**, digite seu e-mail e siga as instruções que chegar na sua caixa de entrada.
 
-As tabelas são criadas pela migration `0001_criar_tabelas_iniciais.sql`.
+**O site está carregando devagar na primeira vez que abro.** É o servidor acordando (veja a observação acima). Aguarde 30-60 segundos e atualize a página.
+
+**Aparece a mensagem "Faça login para continuar".** Sua sessão expirou. Entre novamente com seu e-mail e senha.
+
+**O PDF não baixa.** Verifique se você salvou o orçamento antes de tentar baixar o PDF.
+
+**Quero mudar o nome da oficina que aparece no PDF.** Edite o arquivo `server/.env`, campo `OFICINA_NOME`, e reinicie o servidor.
+
+---
+
+## Licença
+
+Este projeto é de uso interno. Todos os direitos reservados.
