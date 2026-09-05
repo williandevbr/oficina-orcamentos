@@ -59,11 +59,13 @@ O sistema precisa de um banco de dados para guardar clientes e orçamentos. Vamo
 1. Entre em https://supabase.com e crie um projeto novo (é gratuito)
 2. No painel do projeto, no menu lateral, clique em **SQL Editor**
 3. Clique em **New query**
-4. Abra o arquivo `supabase/migrations/0001_criar_tabelas_iniciais.sql` que está na pasta do projeto (pode abrir no Bloco de Notas ou em qualquer editor de texto)
-5. Copie todo o conteúdo desse arquivo e cole no campo de texto do SQL Editor
-6. Clique no botão **Run** (ou pressione Ctrl+Enter)
+4. Rode os 3 arquivos abaixo **nesta ordem** (abra cada um no Bloco de Notas, copie tudo, cole no SQL Editor e clique em **Run**):
+   - `supabase/migrations/0001_criar_tabelas_iniciais.sql` → cria as 3 tabelas
+   - `supabase/migrations/0002_isolamento_user_validade.sql` → separa os dados por usuário + status "expirado"
+   - `supabase/migrations/0003_transacoes_orcamento.sql` → deixa criar/editar orçamento à prova de falhas
+5. Depois da 0002, amarre os dados antigos ao seu usuário (o passo a passo está comentado no final do arquivo 0002: descobrir seu UID em **Authentication > Users** e rodar os 2 `update`)
 
-Pronto. As três tabelas do sistema (clientes, orçamentos e itens) foram criadas.
+Pronto. Para conferir se está tudo certo, rode na pasta `server`: `npm run db:check`.
 
 #### Passo 3 — Pegar as chaves do Supabase
 
@@ -248,23 +250,23 @@ Todas as rotas abaixo de `/api` exigem o cabeçalho `Authorization: Bearer <toke
 
 ### Clientes
 
-| Método | Rota                | Descrição               |
-| ------ | ------------------- | ----------------------- |
-| GET    | `/api/clientes`     | Lista todos os clientes |
-| POST   | `/api/clientes`     | Cria um cliente         |
-| PUT    | `/api/clientes/:id` | Atualiza um cliente     |
-| DELETE | `/api/clientes/:id` | Exclui um cliente       |
+| Método | Rota                | Descrição                                        |
+| ------ | ------------------- | ------------------------------------------------ |
+| GET    | `/api/clientes`     | Lista os seus clientes (`?search=` busca por nome, telefone, placa; `?page=&limit=` pagina) |
+| POST   | `/api/clientes`     | Cria um cliente (nome 2–120 letras, e-mail válido) |
+| PUT    | `/api/clientes/:id` | Atualiza um cliente                              |
+| DELETE | `/api/clientes/:id` | Exclui um cliente                                |
 
 ### Orçamentos
 
-| Método | Rota                      | Descrição                                |
-| ------ | ------------------------- | ---------------------------------------- |
-| GET    | `/api/orcamentos`         | Lista orçamentos (com o nome do cliente) |
-| POST   | `/api/orcamentos`         | Cria um orçamento (calcula o total)      |
-| GET    | `/api/orcamentos/:id`     | Detalhe completo (com os itens)          |
-| PUT    | `/api/orcamentos/:id`     | Atualiza (recalcula o total)             |
-| DELETE | `/api/orcamentos/:id`     | Exclui                                   |
-| GET    | `/api/orcamentos/:id/pdf` | Baixa o PDF do orçamento                 |
+| Método | Rota                      | Descrição                                                                 |
+| ------ | ------------------------- | ------------------------------------------------------------------------- |
+| GET    | `/api/orcamentos`         | Lista orçamentos (`?status=`, `?cliente_id=`, `?search=` por número/observações, `?page=&limit=` pagina) |
+| POST   | `/api/orcamentos`         | Cria um orçamento (transação atômica: salva tudo ou nada; desconto nunca maior que o subtotal; validade 1–365 dias; até 100 itens) |
+| GET    | `/api/orcamentos/:id`     | Detalhe completo (com os itens)                                           |
+| PUT    | `/api/orcamentos/:id`     | Atualiza (transação atômica, recalcula o total)                           |
+| DELETE | `/api/orcamentos/:id`     | Exclui                                                                    |
+| GET    | `/api/orcamentos/:id/pdf` | Baixa o PDF do orçamento (limite: 30 por 15 min por segurança)            |
 
 Exemplo de uso com `curl`:
 
@@ -274,13 +276,17 @@ curl -H "Authorization: Bearer SEU_TOKEN" http://localhost:3333/api/clientes
 
 ---
 
-## Banco de dados (3 tabelas)
+## Banco de dados (3 tabelas + 3 atualizações)
 
-- **clientes** — guarda os dados de cada cliente (nome, contato, carro, placa)
-- **orcamentos** — guarda o cabeçalho de cada orçamento (cliente, total, desconto, status, data)
+- **clientes** — guarda os dados de cada cliente (nome, contato, carro, placa), cada um com seu dono (`user_id`)
+- **orcamentos** — guarda o cabeçalho de cada orçamento (cliente, total, desconto, status, validade)
 - **orcamento_itens** — guarda cada item de cada orçamento (descrição, quantidade, valor unitário)
 
-As tabelas são criadas pelo arquivo `supabase/migrations/0001_criar_tabelas_iniciais.sql`.
+As atualizações são aplicadas em ordem pelos arquivos em `supabase/migrations/`:
+
+1. `0001_criar_tabelas_iniciais.sql` — cria as tabelas
+2. `0002_isolamento_user_validade.sql` — dono por usuário, status "expirado", travas de valores
+3. `0003_transacoes_orcamento.sql` — funções que salvam orçamento + itens numa transação só
 
 ---
 
