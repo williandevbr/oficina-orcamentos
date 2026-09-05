@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Users,
   FileText,
+  Package,
   Wrench,
   LogOut,
   X,
@@ -15,6 +16,7 @@ const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/orcamentos", label: "Orçamentos", icon: FileText },
+  { to: "/catalogo", label: "Catálogo", icon: Package },
 ];
 
 // Sidebar = menu lateral azul escuro.

@@ -6,6 +6,7 @@ import { supabase } from "./lib/supabase.js";
 import { autenticar } from "./middlewares/autenticar.js";
 import clientesRouter from "./routes/clientes.js";
 import orcamentosRouter from "./routes/orcamentos.js";
+import catalogoRouter from "./routes/catalogo.js";
 
 // ============================================================
 // App Express (sem listen) — o listen fica no index.js.
@@ -92,6 +93,9 @@ app.use("/api/clientes", clientesRouter);
 
 // Liga as rotas de orçamentos ao caminho /api/orcamentos
 app.use("/api/orcamentos", orcamentosRouter);
+
+// Liga as rotas do catálogo ao caminho /api/catalogo
+app.use("/api/catalogo", catalogoRouter);
 
 // 404 para rotas desconhecidas
 app.use((req, res) => {

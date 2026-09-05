@@ -12,6 +12,7 @@ import {
   clienteCriarSchema,
   orcamentoCriarSchema,
   orcamentoAtualizarSchema,
+  catalogoSchema,
 } from "./validacao.js";
 
 describe("validarItens", () => {
@@ -191,6 +192,26 @@ describe("schemas Zod (limites profissionais)", () => {
     const muitos = Array.from({ length: 101 }, () => ({ ...itemOk }));
     expect(
       orcamentoCriarSchema.safeParse({ ...orcOk, itens: muitos }).success,
+    ).toBe(false);
+  });
+});
+
+describe("catalogoSchema", () => {
+  const itemOk = { descricao: "Pastilha de freio", tipo: "peca", valor_unitario: 120 };
+
+  it("aceita item válido", () => {
+    expect(catalogoSchema.safeParse(itemOk).success).toBe(true);
+  });
+
+  it("recusa descricao curta, tipo e valor inválidos", () => {
+    expect(
+      catalogoSchema.safeParse({ ...itemOk, descricao: "A" }).success,
+    ).toBe(false);
+    expect(
+      catalogoSchema.safeParse({ ...itemOk, tipo: "outro" }).success,
+    ).toBe(false);
+    expect(
+      catalogoSchema.safeParse({ ...itemOk, valor_unitario: -1 }).success,
     ).toBe(false);
   });
 });

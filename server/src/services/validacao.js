@@ -218,6 +218,32 @@ export const orcamentoAtualizarSchema = z
     { message: "Nada para atualizar.", path: [] },
   );
 
+// ---------- Catálogo (peças e serviços) ----------
+export const catalogoSchema = z.object({
+  descricao: z
+    .string({ error: "Todo item precisa de uma descrição." })
+    .trim()
+    .min(LIMITES.descricaoMin, {
+      error: "Descrição curta demais (mínimo 2 letras).",
+    })
+    .max(LIMITES.descricaoMax, {
+      error: "Descrição muito longa (máximo 140 letras).",
+    }),
+  tipo: z.enum(["servico", "peca"], {
+    error: "O tipo deve ser 'servico' ou 'peca'.",
+  }),
+  valor_unitario: z.coerce
+    .number({ error: "Valor inválido." })
+    .refine((n) => Number.isFinite(n) && n >= 0, {
+      message: "Valor não pode ser negativo.",
+    })
+    .refine((n) => n <= LIMITES.valorMax, {
+      message: "Valor muito alto.",
+    }),
+});
+
+export const catalogoAtualizarSchema = catalogoSchema;
+
 // ---------- Funções legadas (mantidas por compatibilidade) ----------
 
 // Valida a lista de itens do orçamento.
