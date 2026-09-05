@@ -1,6 +1,7 @@
 import pdfmake from "pdfmake";
 import { fileURLToPath } from "url";
 import path from "path";
+import { calcularTotais } from "./calculo.js";
 
 // ============================================================
 // Geração do PDF de ORÇAMENTO (layout profissional)
@@ -48,6 +49,7 @@ const rotuloStatus = {
   enviado: "Enviado",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  expirado: "Expirado",
 };
 
 // "Molde" do documento: recebe o orçamento completo (com cliente e itens)
@@ -59,15 +61,14 @@ export async function gerarPdfOrcamento(orcamento) {
     orcamento.created_at || Date.now(),
   ).toLocaleDateString("pt-BR");
 
-  // Recalcula os totais com a mesma regra do sistema
-  const subtotal = itens.reduce(
-    (soma, item) =>
-      soma +
-      (Number(item.quantidade) || 0) * (Number(item.valor_unitario) || 0),
-    0,
+  // Recalcula os totais com a mesma regra do sistema (fonte única)
+  const { subtotal, desconto, total } = calcularTotais(
+    itens.map((item) => ({
+      quantidade: item.quantidade,
+      valor_unitario: item.valor_unitario,
+    })),
+    orcamento.desconto,
   );
-  const desconto = Number(orcamento.desconto) || 0;
-  const total = Math.max(0, subtotal - desconto);
 
   const estiloTabela = {
     // Cabeçalho da tabela de itens (letra branca sobre azul)

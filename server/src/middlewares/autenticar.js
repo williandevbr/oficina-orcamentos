@@ -15,14 +15,20 @@ export async function autenticar(req, res, next) {
     return res.status(401).json({ message: "Faça login para continuar." });
   }
 
-  // O Supabase verifica se o crachá é verdadeiro e não está vencido.
-  const { data, error } = await supabase.auth.getUser(token);
+  try {
+    // O Supabase verifica se o crachá é verdadeiro e não está vencido.
+    const { data, error } = await supabase.auth.getUser(token);
 
-  if (error || !data.user) {
+    if (error || !data.user) {
+      return res.status(401).json({ message: "Sessão inválida ou expirada." });
+    }
+
+    // Guarda o usuário na requisição para o restante das rotas usarem
+    req.usuario = data.user;
+    req.userId = data.user.id;
+    req.token = token;
+    return next();
+  } catch {
     return res.status(401).json({ message: "Sessão inválida ou expirada." });
   }
-
-  // Guarda o usuário na requisição para o restante das rotas usarem
-  req.usuario = data.user;
-  return next();
 }
