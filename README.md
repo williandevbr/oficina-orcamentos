@@ -268,6 +268,15 @@ Todas as rotas abaixo de `/api` exigem o cabeçalho `Authorization: Bearer <toke
 | DELETE | `/api/orcamentos/:id`     | Exclui                                                                    |
 | GET    | `/api/orcamentos/:id/pdf` | Baixa o PDF do orçamento (limite: 30 por 15 min por segurança)            |
 
+### Catálogo
+
+| Método | Rota                | Descrição                                        |
+| ------ | ------------------- | ------------------------------------------------ |
+| GET    | `/api/catalogo`     | Lista peças e serviços (`?search=`, `?tipo=peca\|servico`, `?page=&limit=`) |
+| POST   | `/api/catalogo`     | Cadastra um item (sem duplicar descrição)        |
+| PUT    | `/api/catalogo/:id` | Atualiza um item                                 |
+| DELETE | `/api/catalogo/:id` | Exclui um item (orçamentos antigos não mudam)    |
+
 Exemplo de uso com `curl`:
 
 ```bash
@@ -287,6 +296,7 @@ As atualizações são aplicadas em ordem pelos arquivos em `supabase/migrations
 1. `0001_criar_tabelas_iniciais.sql` — cria as tabelas
 2. `0002_isolamento_user_validade.sql` — dono por usuário, status "expirado", travas de valores
 3. `0003_transacoes_orcamento.sql` — funções que salvam orçamento + itens numa transação só
+4. `0004_catalogo_itens.sql` — tabela do catálogo de peças e serviços
 
 ---
 

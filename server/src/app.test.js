@@ -143,3 +143,37 @@ describe("orçamentos (validação e paginação)", () => {
     expect(resp.status).toBe(400);
   });
 });
+
+describe("catálogo (peças e serviços)", () => {
+  it("GET sem crachá nega (401)", async () => {
+    const resp = await request(app).get("/api/catalogo");
+    expect(resp.status).toBe(401);
+  });
+
+  it("POST inválido recusa (400)", async () => {
+    const resp = await request(app)
+      .post("/api/catalogo")
+      .set("Authorization", "Bearer token-teste")
+      .send({ descricao: "A", tipo: "peca", valor_unitario: 10 });
+
+    expect(resp.status).toBe(400);
+  });
+
+  it("GET com page devolve objeto paginado do dono", async () => {
+    const filtros = [];
+    vi.spyOn(supabase, "from").mockImplementation(() =>
+      consultaFalsa(
+        { data: [{ id: "c1", descricao: "Pastilha" }], error: null, count: 1 },
+        filtros,
+      ),
+    );
+
+    const resp = await request(app)
+      .get("/api/catalogo?page=1&limit=2")
+      .set("Authorization", "Bearer token-teste");
+
+    expect(resp.status).toBe(200);
+    expect(resp.body.total).toBe(1);
+    expect(filtros).toContainEqual(["user_id", USER_ID]);
+  });
+});

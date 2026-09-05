@@ -15,6 +15,7 @@ import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Clientes from "./pages/Clientes.jsx";
 import Orcamentos from "./pages/Orcamentos.jsx";
+import Catalogo from "./pages/Catalogo.jsx";
 import NotFound from "./pages/NotFound.jsx";
 
 // Estrutura das páginas internas (menu lateral + conteúdo)
@@ -71,6 +72,7 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/orcamentos" element={<Orcamentos />} />
+              <Route path="/catalogo" element={<Catalogo />} />
               {/* Rota desconhecida com login: página 404 dentro do layout */}
               <Route path="*" element={<NotFound />} />
             </Route>
