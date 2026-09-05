@@ -33,6 +33,7 @@ import { apiFetch } from "../lib/api.js";
 
 const API = "/api/orcamentos";
 const API_CLIENTES = "/api/clientes";
+const API_CATALOGO = "/api/catalogo";
 const POR_PAGINA = 8;
 
 const STATUS_OPCOES = [
@@ -179,6 +180,7 @@ export default function Orcamentos() {
   const [total, setTotal] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [clientes, setClientes] = useState([]);
+  const [catalogo, setCatalogo] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -227,15 +229,17 @@ export default function Orcamentos() {
 
       if (!buscaDebounced) {
         // Modo paginado no servidor
-        const [respOrc, respCli] = await Promise.all([
+        const [respOrc, respCli, respCat] = await Promise.all([
           apiFetch(`${API}?page=${pagina}&limit=${POR_PAGINA}${statusParam}`, {
             signal: sinal,
           }),
           apiFetch(API_CLIENTES, { signal: sinal }),
+          apiFetch(API_CATALOGO, { signal: sinal }),
         ]);
-        const [dadosOrc, dadosCli] = await Promise.all([
+        const [dadosOrc, dadosCli, dadosCat] = await Promise.all([
           lerJsonSeguro(respOrc),
           lerJsonSeguro(respCli),
+          lerJsonSeguro(respCat),
         ]);
         if (sinal?.aborted) return;
         if (respOrc.status === 401 || respCli.status === 401) {
@@ -254,18 +258,21 @@ export default function Orcamentos() {
           setTotalPaginas(dadosOrc.totalPages ?? 1);
         }
         setClientes(Array.isArray(dadosCli) ? dadosCli : dadosCli.data || []);
+        setCatalogo(Array.isArray(dadosCat) ? dadosCat : dadosCat.data || []);
       } else {
         // Modo busca: lista com filtro de status e filtra o texto no navegador
         // (para achar também por nome do cliente e placa)
-        const [respOrc, respCli] = await Promise.all([
+        const [respOrc, respCli, respCat] = await Promise.all([
           apiFetch(`${API}?status=${filtroStatus === "todos" ? "" : filtroStatus}`, {
             signal: sinal,
           }),
           apiFetch(API_CLIENTES, { signal: sinal }),
+          apiFetch(API_CATALOGO, { signal: sinal }),
         ]);
-        const [dadosOrc, dadosCli] = await Promise.all([
+        const [dadosOrc, dadosCli, dadosCat] = await Promise.all([
           lerJsonSeguro(respOrc),
           lerJsonSeguro(respCli),
+          lerJsonSeguro(respCat),
         ]);
         if (sinal?.aborted) return;
         if (respOrc.status === 401 || respCli.status === 401) {
@@ -290,6 +297,7 @@ export default function Orcamentos() {
         setTotal(filtrada.length);
         setTotalPaginas(totPag);
         setClientes(Array.isArray(dadosCli) ? dadosCli : dadosCli.data || []);
+        setCatalogo(Array.isArray(dadosCat) ? dadosCat : dadosCat.data || []);
       }
       setErro("");
     } catch (e) {
@@ -573,6 +581,7 @@ export default function Orcamentos() {
         <OrcamentoForm
           key={dadosEdicao?.id || "novo"}
           clientes={clientes}
+          catalogo={catalogo}
           dadosIniciais={dadosEdicao}
           erro={erroForm}
           salvando={salvando}

@@ -34,6 +34,7 @@ function comChave(item) {
 
 export default function OrcamentoForm({
   clientes,
+  catalogo = [], // peças/serviços cadastrados (para puxar sem digitar)
   dadosIniciais, // null para novo, ou o orçamento completo para edição
   erro,
   salvando = false,
@@ -65,6 +66,8 @@ export default function OrcamentoForm({
       : [comChave({})],
   );
   const [erroLocal, setErroLocal] = useState("");
+  // Qual linha está mostrando sugestões do catálogo (-1 = nenhuma)
+  const [sugestaoAberta, setSugestaoAberta] = useState(-1);
 
   function aoMudar(campo, valor) {
     setForm({ ...form, [campo]: valor });
@@ -87,6 +90,32 @@ export default function OrcamentoForm({
       i === indice ? { ...item, [campo]: valor } : item,
     );
     setItens(novos);
+  }
+
+  // Sugestões do catálogo para a linha (até 5, pelo texto digitado)
+  function sugestoesPara(item) {
+    const termo = String(item.descricao || "").trim().toLowerCase();
+    if (termo.length < 2 || catalogo.length === 0) return [];
+    return catalogo
+      .filter((c) => c.descricao.toLowerCase().includes(termo))
+      .slice(0, 5);
+  }
+
+  // Puxa do catálogo: preenche descrição, tipo e preço sozinho
+  function puxarDoCatalogo(indice, entrada) {
+    setItens(
+      itens.map((item, i) =>
+        i === indice
+          ? {
+              ...item,
+              descricao: entrada.descricao,
+              tipo: entrada.tipo,
+              valor_unitario: entrada.valor_unitario,
+            }
+          : item,
+      ),
+    );
+    setSugestaoAberta(-1);
   }
 
   // Cálculo ao vivo (mesma regra do servidor)
@@ -274,18 +303,57 @@ export default function OrcamentoForm({
                       <option value="peca">Peça</option>
                     </select>
                   </div>
-                  <div className="col-span-12 sm:col-span-4">
+                  <div className="relative col-span-12 sm:col-span-4">
                     <input
                       type="text"
                       required
-                      placeholder="Descrição (ex: Troca de óleo)"
+                      placeholder="Descrição (digite ou puxe do catálogo)"
                       aria-label="Descrição do item"
+                      autoComplete="off"
                       value={item.descricao}
-                      onChange={(e) =>
-                        atualizarItem(indice, "descricao", e.target.value)
+                      onChange={(e) => {
+                        atualizarItem(indice, "descricao", e.target.value);
+                        setSugestaoAberta(indice);
+                      }}
+                      onFocus={() => setSugestaoAberta(indice)}
+                      onBlur={() =>
+                        setTimeout(() => setSugestaoAberta(-1), 150)
                       }
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                     />
+                    {sugestaoAberta === indice &&
+                      sugestoesPara(item).length > 0 && (
+                        <ul
+                          role="listbox"
+                          aria-label="Sugestões do catálogo"
+                          className="absolute inset-x-0 top-full z-10 mt-1 max-h-44 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                        >
+                          {sugestoesPara(item).map((s) => (
+                            <li key={s.id}>
+                              <button
+                                type="button"
+                                role="option"
+                                aria-selected="false"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  puxarDoCatalogo(indice, s);
+                                }}
+                                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-blue-50"
+                              >
+                                <span className="min-w-0 truncate text-slate-800">
+                                  {s.descricao}
+                                  <span className="ml-2 text-xs text-slate-400">
+                                    {s.tipo === "peca" ? "Peça" : "Serviço"}
+                                  </span>
+                                </span>
+                                <span className="shrink-0 font-semibold text-blue-700">
+                                  {formatarMoeda(s.valor_unitario)}
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                   </div>
                   <div className="col-span-4 sm:col-span-2">
                     <input
