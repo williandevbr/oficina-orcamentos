@@ -273,6 +273,7 @@ export default function Dashboard() {
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Link
               to="/clientes"
+              state={{ novo: true }}
               className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
             >
               <Plus className="h-4 w-4" />
@@ -280,6 +281,7 @@ export default function Dashboard() {
             </Link>
             <Link
               to="/orcamentos"
+              state={{ novo: true }}
               className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700"
             >
               <Plus className="h-4 w-4" />
