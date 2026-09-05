@@ -14,5 +14,13 @@ export function formatarMoeda(valor) {
 export function formatarData(dataISO) {
   if (!dataISO) return "—";
   const data = new Date(dataISO);
+  if (Number.isNaN(data.getTime())) return "—";
   return data.toLocaleDateString("pt-BR");
+}
+
+// Formata número do orçamento com zeros: 7 -> "0007"
+// Se vier nulo/indefinido, mostra "—" em vez de "undefined".
+export function formatarNumero(numero) {
+  if (numero === null || numero === undefined || numero === "") return "—";
+  return String(numero).padStart(4, "0");
 }

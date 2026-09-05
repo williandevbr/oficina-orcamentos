@@ -11,3 +11,11 @@ body {
   background-color: #f1f5f9; /* fundo cinza-azulado claro */
   color: #0f172a; /* texto azul bem escuro */
 }
+
+/* Não usar overflow-x: hidden no body — quebra position: sticky
+   do cabeçalho e esconde o scroll real das tabelas (que já têm
+   overflow-x-auto próprio). */
+html,
+body {
+  overflow-x: clip;
+}

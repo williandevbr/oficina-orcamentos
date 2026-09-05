@@ -37,10 +37,18 @@ export function AuthProvider({ children }) {
   // Ao abrir o site, verifica se já existe uma sessão salva
   // (quem já entrou antes continua logado depois de fechar o app)
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUsuario(data.session?.user ?? null);
-      setCarregandoSessao(false);
-    });
+    supabase
+      .auth.getSession()
+      .then(({ data }) => {
+        setUsuario(data.session?.user ?? null);
+      })
+      .catch(() => {
+        // Supabase fora do ar/bloqueado: não trava em "Verificando acesso"
+        setUsuario(null);
+      })
+      .finally(() => {
+        setCarregandoSessao(false);
+      });
 
     // Fica ouvindo mudanças na sessão (login, logout, expiração)
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -73,7 +81,9 @@ export function AuthProvider({ children }) {
   }
 
   async function recuperarSenha(email) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
     if (error) throw new Error(traduzirErroAuth(error.message));
   }
 
