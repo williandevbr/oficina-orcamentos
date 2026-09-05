@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import {
   Wrench,
   Mail,
@@ -7,6 +8,8 @@ import {
   UserPlus,
   KeyRound,
   Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
@@ -23,14 +26,23 @@ const abas = [
 ];
 
 export default function Login() {
-  const { entrar, cadastrar, recuperarSenha } = useAuth();
+  const { usuario, carregandoSessao, entrar, cadastrar, recuperarSenha } =
+    useAuth();
+  const location = useLocation();
+  const destino = location.state?.from || "/";
 
   const [aba, setAba] = useState("entrar");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [msgErro, setMsgErro] = useState("");
   const [msgOk, setMsgOk] = useState("");
   const [ocupado, setOcupado] = useState(false);
+
+  // Se já está logado, volta para onde veio (evita login duplicado)
+  if (!carregandoSessao && usuario) {
+    return <Navigate to={destino} replace />;
+  }
 
   async function aoEnviar(evento) {
     evento.preventDefault();
@@ -49,6 +61,7 @@ export default function Login() {
             "Conta criada! Enviamos um e-mail de confirmação. Abra sua caixa de entrada, clique no link e depois entre com seus dados.",
           );
           setSenha("");
+          setAba("entrar");
         }
       }
     } catch (erro) {
@@ -116,14 +129,20 @@ export default function Login() {
           <form onSubmit={aoEnviar} className="space-y-4">
             {/* E-mail */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="login-email"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
                 E-mail
               </label>
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
+                  id="login-email"
+                  name="email"
                   type="email"
                   required
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="voce@oficina.com"
@@ -134,20 +153,40 @@ export default function Login() {
 
             {/* Senha */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="login-senha"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
                 Senha
               </label>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
-                  type="password"
+                  id="login-senha"
+                  name="password"
+                  type={mostrarSenha ? "text" : "password"}
                   required
                   minLength={6}
+                  autoComplete={
+                    aba === "entrar" ? "current-password" : "new-password"
+                  }
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
-                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-10 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                 />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha((v) => !v)}
+                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600"
+                >
+                  {mostrarSenha ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
 

@@ -26,3 +26,16 @@ if (!supabaseUrl || !supabaseKey) {
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false },
 });
+
+// Admin (service_role quando disponível): ignora RLS.
+// Use SEMPRE com filtro explícito por user_id nas consultas.
+export const supabaseAdmin = supabase;
+
+// Cliente por usuário (respeita RLS): usa a chave anon + token do login.
+export function supabaseDoUsuario(token) {
+  const anonKey = process.env.SUPABASE_ANON_KEY || supabaseKey;
+  return createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false },
+  });
+}

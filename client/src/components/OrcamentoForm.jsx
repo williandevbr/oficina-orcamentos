@@ -18,6 +18,7 @@ const statusOpcoes = [
   { valor: "enviado", rotulo: "Enviado" },
   { valor: "aprovado", rotulo: "Aprovado" },
   { valor: "recusado", rotulo: "Recusado" },
+  { valor: "expirado", rotulo: "Expirado" },
 ];
 
 const itemVazio = {
@@ -27,13 +28,27 @@ const itemVazio = {
   valor_unitario: "",
 };
 
+function comChave(item) {
+  return { ...itemVazio, ...item, _key: `${Date.now()}-${Math.random()}` };
+}
+
 export default function OrcamentoForm({
   clientes,
   dadosIniciais, // null para novo, ou o orçamento completo para edição
   erro,
+  salvando = false,
   onSalvar,
   onFechar,
 }) {
+  // Fecha com Escape
+  useEffect(() => {
+    function aoTeclar(e) {
+      if (e.key === "Escape") onFechar();
+    }
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, [onFechar]);
+
   // Estado do formulário
   const [form, setForm] = useState({
     cliente_id: dadosIniciais?.cliente_id || "",
@@ -43,22 +58,27 @@ export default function OrcamentoForm({
     validade_dias: dadosIniciais?.validade_dias || 7,
   });
 
-  // Estado dos itens
+  // Estado dos itens (cada um com chave estável para o React)
   const [itens, setItens] = useState(
     dadosIniciais?.orcamento_itens?.length
-      ? dadosIniciais.orcamento_itens
-      : [itemVazio],
+      ? dadosIniciais.orcamento_itens.map(comChave)
+      : [comChave({})],
   );
+  const [erroLocal, setErroLocal] = useState("");
 
   function aoMudar(campo, valor) {
     setForm({ ...form, [campo]: valor });
   }
 
   function adicionarItem() {
-    setItens([...itens, { ...itemVazio }]);
+    setItens([...itens, comChave({})]);
   }
 
   function removerItem(indice) {
+    if (itens.length <= 1) {
+      setErroLocal("O orçamento precisa de pelo menos um item.");
+      return;
+    }
     setItens(itens.filter((_, i) => i !== indice));
   }
 
@@ -76,19 +96,47 @@ export default function OrcamentoForm({
       (Number(item.quantidade) || 0) * (Number(item.valor_unitario) || 0),
     0,
   );
-  const descontoNum = Number(form.desconto) || 0;
+  const descontoNum = Math.max(0, Number(form.desconto) || 0);
   const total = Math.max(0, subtotal - descontoNum);
 
   function aoSubmeter(e) {
     e.preventDefault();
+    setErroLocal("");
+    if (itens.length === 0) {
+      setErroLocal("O orçamento precisa de pelo menos um item.");
+      return;
+    }
+    for (const item of itens) {
+      if (!item.descricao || !String(item.descricao).trim()) {
+        setErroLocal("Todo item precisa de uma descrição.");
+        return;
+      }
+      if (!(Number(item.quantidade) > 0)) {
+        setErroLocal("Todo item precisa de quantidade maior que zero.");
+        return;
+      }
+      if (!(Number(item.valor_unitario) >= 0)) {
+        setErroLocal("Valor do item não pode ser negativo.");
+        return;
+      }
+    }
+    if (descontoNum > subtotal) {
+      setErroLocal(
+        `Desconto não pode ser maior que o subtotal (${formatarMoeda(subtotal)}).`,
+      );
+      return;
+    }
     onSalvar({
       cliente_id: form.cliente_id,
       status: form.status,
       desconto: descontoNum,
       observacoes: form.observacoes,
-      validade_dias: Number(form.validade_dias) || 7,
+      validade_dias: Math.min(
+        365,
+        Math.max(1, Number(form.validade_dias) || 7),
+      ),
       itens: itens.map((item) => ({
-        descricao: item.descricao,
+        descricao: String(item.descricao).trim(),
         tipo: item.tipo,
         quantidade: Number(item.quantidade) || 0,
         valor_unitario: Number(item.valor_unitario) || 0,
@@ -96,9 +144,25 @@ export default function OrcamentoForm({
     });
   }
 
+  const erroVisivel = erroLocal || erro;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onFechar();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={
+          dadosIniciais
+            ? `Editar orçamento nº ${dadosIniciais.numero}`
+            : "Novo orçamento"
+        }
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+      >
         {/* Cabeçalho */}
         <div className="mb-6 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900">
@@ -107,7 +171,9 @@ export default function OrcamentoForm({
               : "Novo orçamento"}
           </h3>
           <button
+            type="button"
             onClick={onFechar}
+            aria-label="Fechar"
             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <X className="h-5 w-5" />
@@ -155,12 +221,17 @@ export default function OrcamentoForm({
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="orc-validade"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
                 Validade (dias)
               </label>
               <input
+                id="orc-validade"
                 type="number"
                 min="1"
+                max="365"
                 value={form.validade_dias}
                 onChange={(e) => aoMudar("validade_dias", e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
@@ -187,12 +258,13 @@ export default function OrcamentoForm({
             <div className="space-y-3">
               {itens.map((item, indice) => (
                 <div
-                  key={indice}
+                  key={item._key || indice}
                   className="grid grid-cols-12 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3"
                 >
                   <div className="col-span-12 sm:col-span-2">
                     <select
                       value={item.tipo}
+                      aria-label="Tipo do item"
                       onChange={(e) =>
                         atualizarItem(indice, "tipo", e.target.value)
                       }
@@ -205,7 +277,9 @@ export default function OrcamentoForm({
                   <div className="col-span-12 sm:col-span-4">
                     <input
                       type="text"
+                      required
                       placeholder="Descrição (ex: Troca de óleo)"
+                      aria-label="Descrição do item"
                       value={item.descricao}
                       onChange={(e) =>
                         atualizarItem(indice, "descricao", e.target.value)
@@ -216,9 +290,11 @@ export default function OrcamentoForm({
                   <div className="col-span-4 sm:col-span-2">
                     <input
                       type="number"
+                      required
                       min="0"
                       step="any"
                       placeholder="Qtd"
+                      aria-label="Quantidade"
                       value={item.quantidade}
                       onChange={(e) =>
                         atualizarItem(indice, "quantidade", e.target.value)
@@ -229,9 +305,11 @@ export default function OrcamentoForm({
                   <div className="col-span-4 sm:col-span-2">
                     <input
                       type="number"
+                      required
                       min="0"
                       step="any"
                       placeholder="R$ unitário"
+                      aria-label="Valor unitário"
                       value={item.valor_unitario}
                       onChange={(e) =>
                         atualizarItem(indice, "valor_unitario", e.target.value)
@@ -250,6 +328,7 @@ export default function OrcamentoForm({
                       type="button"
                       onClick={() => removerItem(indice)}
                       title="Remover item"
+                      aria-label="Remover item"
                       className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-100 hover:text-red-600"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -300,9 +379,12 @@ export default function OrcamentoForm({
             </div>
           </div>
 
-          {erro && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {erro}
+          {erroVisivel && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {erroVisivel}
             </div>
           )}
 
@@ -311,15 +393,17 @@ export default function OrcamentoForm({
             <button
               type="button"
               onClick={onFechar}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+              disabled={salvando}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-60"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-blue-700"
+              disabled={salvando}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-blue-700 disabled:opacity-60"
             >
-              Salvar orçamento
+              {salvando ? "Salvando..." : "Salvar orçamento"}
             </button>
           </div>
         </form>

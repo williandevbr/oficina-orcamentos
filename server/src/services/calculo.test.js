@@ -7,7 +7,12 @@
 // Se qualquer regra quebrar no futuro, estes testes acusam na hora.
 // ============================================================
 import { describe, it, expect } from "vitest";
-import { calcularSubtotal, calcularTotais } from "./calculo.js";
+import {
+  calcularSubtotal,
+  calcularTotais,
+  arredondarCentavos,
+  totalLinha,
+} from "./calculo.js";
 
 describe("calcularSubtotal (soma quantidade x valor de cada item)", () => {
   it("calcula corretamente: 1x120 + 2x45 = 210", () => {
@@ -61,5 +66,17 @@ describe("calcularTotais (subtotal, desconto e total)", () => {
   it("desconto zero quando não informado", () => {
     const { desconto } = calcularTotais([{ quantidade: 1, valor_unitario: 5 }]);
     expect(desconto).toBe(0);
+  });
+
+  it("desconto negativo é travado em 0 (não aumenta o total)", () => {
+    const itens = [{ quantidade: 1, valor_unitario: 100 }];
+    const { desconto, total } = calcularTotais(itens, -50);
+    expect(desconto).toBe(0);
+    expect(total).toBe(100);
+  });
+
+  it("arredonda float para centavos (0.1*3 = 0.3)", () => {
+    expect(arredondarCentavos(0.1 + 0.2)).toBe(0.3);
+    expect(totalLinha(2.5, 10.9)).toBe(27.25);
   });
 });

@@ -2,7 +2,7 @@
 // Testes unitários das funções de formatação do frontend
 // ============================================================
 import { describe, it, expect } from "vitest";
-import { formatarMoeda, formatarData } from "./format.js";
+import { formatarMoeda, formatarData, formatarNumero } from "./format.js";
 
 describe("formatarMoeda", () => {
   it("formata número como Real brasileiro", () => {
@@ -34,5 +34,19 @@ describe("formatarData", () => {
 
   it("retorna travessão quando não há data", () => {
     expect(formatarData(null)).toBe("—");
+  });
+
+  it("retorna travessão para data invalida", () => {
+    expect(formatarData("xxx")).toBe("—");
+  });
+});
+
+describe("formatarNumero", () => {
+  it("preenche com zeros", () => {
+    expect(formatarNumero(7)).toBe("0007");
+  });
+  it("nao mostra undefined", () => {
+    expect(formatarNumero(null)).toBe("—");
+    expect(formatarNumero(undefined)).toBe("—");
   });
 });

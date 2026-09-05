@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Lock } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
@@ -12,6 +12,7 @@ import { useAuth } from "../contexts/AuthContext.jsx";
 // ============================================================
 export default function ExigirLogin() {
   const { usuario, carregandoSessao } = useAuth();
+  const location = useLocation();
 
   if (carregandoSessao) {
     return (
@@ -25,7 +26,13 @@ export default function ExigirLogin() {
   }
 
   if (!usuario) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname + location.search + location.hash }}
+      />
+    );
   }
 
   return <Outlet />;
