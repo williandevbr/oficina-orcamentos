@@ -22,6 +22,29 @@ import {
 
 const router = Router();
 
+// Busca também na tabela de veículos: quem tem a placa/veículo
+// digitado aparece (a pessoa é 1 só, mesmo com moto + carro).
+// Devolve ids de cliente para somar no filtro OU da busca.
+async function idsClientePorVeiculo(userId, termo) {
+  const { data } = await supabase
+    .from("veiculos")
+    .select("cliente_id")
+    .eq("user_id", userId)
+    .or(`veiculo.ilike.%${termo}%,placa.ilike.%${termo}%`)
+    .limit(100);
+  return [...new Set((data || []).map((v) => v.cliente_id).filter(Boolean))];
+}
+
+// Monta o filtro OU da busca (colunas do cliente + donos dos veículos)
+function filtroBuscaCliente(termo, idsVeiculo) {
+  let filtro =
+    `nome.ilike.%${termo}%,telefone.ilike.%${termo}%,email.ilike.%${termo}%,placa.ilike.%${termo}%,veiculo.ilike.%${termo}%,documento.ilike.%${termo}%`;
+  if (idsVeiculo.length > 0) {
+    filtro += `,id.in.(${idsVeiculo.join(",")})`;
+  }
+  return filtro;
+}
+
 // 1. LER (Read) - lista os clientes do usuário logado
 // Sem ?page -> devolve array (compatível com o site atual).
 // Com ?page -> devolve { data, total, page, limit, totalPages }.
@@ -39,9 +62,8 @@ router.get("/", async (req, res, next) => {
       if (typeof search === "string" && search.trim() !== "") {
         const s = search.trim().replace(/[%_,"'().]/g, "");
         if (s !== "") {
-          query = query.or(
-            `nome.ilike.%${s}%,telefone.ilike.%${s}%,email.ilike.%${s}%,placa.ilike.%${s}%,veiculo.ilike.%${s}%,documento.ilike.%${s}%`,
-          );
+          const ids = await idsClientePorVeiculo(req.userId, s);
+          query = query.or(filtroBuscaCliente(s, ids));
         }
       }
       const { data, error } = await query.order("created_at", {
@@ -66,9 +88,8 @@ router.get("/", async (req, res, next) => {
     if (typeof search === "string" && search.trim() !== "") {
       const s = search.trim().replace(/[%_,"'().]/g, "");
       if (s !== "") {
-        query = query.or(
-          `nome.ilike.%${s}%,telefone.ilike.%${s}%,email.ilike.%${s}%,placa.ilike.%${s}%,veiculo.ilike.%${s}%,documento.ilike.%${s}%`,
-        );
+        const ids = await idsClientePorVeiculo(req.userId, s);
+        query = query.or(filtroBuscaCliente(s, ids));
       }
     }
     const { data, error, count } = await query

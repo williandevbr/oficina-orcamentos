@@ -34,6 +34,7 @@ function comChave(item) {
 
 export default function OrcamentoForm({
   clientes,
+  veiculos = [], // veículos cadastrados (filtrados pelo cliente escolhido)
   catalogo = [], // peças/serviços cadastrados (para puxar sem digitar)
   dadosIniciais, // null para novo, ou o orçamento completo para edição
   erro,
@@ -53,6 +54,7 @@ export default function OrcamentoForm({
   // Estado do formulário
   const [form, setForm] = useState({
     cliente_id: dadosIniciais?.cliente_id || "",
+    veiculo_id: dadosIniciais?.veiculo_id || "",
     status: dadosIniciais?.status || "rascunho",
     desconto: dadosIniciais?.desconto || 0,
     observacoes: dadosIniciais?.observacoes || "",
@@ -70,8 +72,18 @@ export default function OrcamentoForm({
   const [sugestaoAberta, setSugestaoAberta] = useState(-1);
 
   function aoMudar(campo, valor) {
+    // Trocou de cliente -> o veículo anterior não vale mais
+    if (campo === "cliente_id") {
+      setForm({ ...form, cliente_id: valor, veiculo_id: "" });
+      return;
+    }
     setForm({ ...form, [campo]: valor });
   }
+
+  // Veículos do cliente escolhido (moto, carro... o que ele tiver)
+  const veiculosDoCliente = (veiculos || []).filter(
+    (v) => v.cliente_id === form.cliente_id,
+  );
 
   function adicionarItem() {
     setItens([...itens, comChave({})]);
@@ -157,6 +169,7 @@ export default function OrcamentoForm({
     }
     onSalvar({
       cliente_id: form.cliente_id,
+      veiculo_id: form.veiculo_id || null,
       status: form.status,
       desconto: descontoNum,
       observacoes: form.observacoes,
@@ -225,8 +238,7 @@ export default function OrcamentoForm({
                 <option value="">Selecione o cliente...</option>
                 {clientes.map((cliente) => (
                   <option key={cliente.id} value={cliente.id}>
-                    {cliente.nome}{" "}
-                    {cliente.veiculo ? `- ${cliente.veiculo}` : ""}
+                    {cliente.nome}
                   </option>
                 ))}
               </select>
@@ -267,6 +279,39 @@ export default function OrcamentoForm({
               />
             </div>
           </div>
+
+          {/* Veículo do atendimento (só aparece se o cliente tiver) */}
+          {form.cliente_id !== "" && (
+            <div>
+              <label
+                htmlFor="orc-veiculo"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
+                Veículo
+              </label>
+              {veiculosDoCliente.length === 0 ? (
+                <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                  Este cliente ainda não tem veículos. Cadastre na tela de
+                  Clientes (botão do carro).
+                </p>
+              ) : (
+                <select
+                  id="orc-veiculo"
+                  value={form.veiculo_id}
+                  onChange={(e) => aoMudar("veiculo_id", e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                >
+                  <option value="">Sem veículo específico</option>
+                  {veiculosDoCliente.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.veiculo}
+                      {v.placa ? ` • ${v.placa}` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
 
           {/* Itens do orçamento */}
           <div>

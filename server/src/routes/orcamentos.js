@@ -72,7 +72,9 @@ router.get("/", async (req, res, next) => {
 
     if (page === undefined) {
       const { data, error } = await aplicarFiltros(
-        supabase.from("orcamentos").select("*, clientes(nome, veiculo, placa)"),
+        supabase
+          .from("orcamentos")
+          .select("*, clientes(nome, veiculo, placa), veiculos(veiculo, placa)"),
       ).order("numero", { ascending: false });
       if (error) {
         return res.status(400).json({ message: mensagemBanco(error) });
@@ -88,7 +90,9 @@ router.get("/", async (req, res, next) => {
     const { data, error, count } = await aplicarFiltros(
       supabase
         .from("orcamentos")
-        .select("*, clientes(nome, veiculo, placa)", { count: "exact" }),
+        .select("*, clientes(nome, veiculo, placa), veiculos(veiculo, placa)", {
+          count: "exact",
+        }),
     )
       .order("numero", { ascending: false })
       .range(from, to);
@@ -121,7 +125,7 @@ router.get("/:id/pdf", limitadorPdf, async (req, res, next) => {
   const { data, error } = await supabase
     .from("orcamentos")
     .select(
-      "*, clientes(nome, telefone, email, endereco, veiculo, placa), orcamento_itens(*)",
+      "*, clientes(nome, telefone, email, endereco, veiculo, placa), veiculos(veiculo, placa), orcamento_itens(*)",
     )
     .eq("id", id)
     .eq("user_id", req.userId)
@@ -165,7 +169,9 @@ router.get("/:id", async (req, res, next) => {
 
   const { data, error } = await supabase
     .from("orcamentos")
-    .select("*, clientes(nome, veiculo, placa, telefone), orcamento_itens(*)")
+    .select(
+      "*, clientes(nome, veiculo, placa, telefone), veiculos(veiculo, placa), orcamento_itens(*)",
+    )
     .eq("id", id)
     .eq("user_id", req.userId)
     .single();
@@ -195,6 +201,7 @@ router.post("/", async (req, res, next) => {
     }
     const {
       cliente_id,
+      veiculo_id = null,
       status = "rascunho",
       desconto = 0,
       observacoes,
@@ -231,6 +238,7 @@ router.post("/", async (req, res, next) => {
         p_observacoes: observacoes || null,
         p_validade_dias: validadeNum,
         p_itens: itensJson,
+        p_veiculo_id: veiculo_id,
       },
     );
 
@@ -240,6 +248,11 @@ router.post("/", async (req, res, next) => {
         return res
           .status(400)
           .json({ message: "Escolha um cliente válido para o orçamento." });
+      }
+      if (msg.includes("VEICULO_INVALIDO")) {
+        return res
+          .status(400)
+          .json({ message: "Escolha um veículo válido deste cliente." });
       }
       if (
         msg.includes("ITENS_OBRIGATORIOS") ||
@@ -283,6 +296,7 @@ router.put("/:id", async (req, res, next) => {
     const corpo = req.body || {};
     const entrada = {
       ...(corpo.cliente_id !== undefined && { cliente_id: corpo.cliente_id }),
+      ...(corpo.veiculo_id !== undefined && { veiculo_id: corpo.veiculo_id }),
       ...(corpo.status !== undefined && { status: corpo.status }),
       ...(corpo.desconto !== undefined && { desconto: corpo.desconto }),
       ...(corpo.observacoes !== undefined && { observacoes: corpo.observacoes }),
@@ -295,13 +309,13 @@ router.put("/:id", async (req, res, next) => {
     if (!validado.success) {
       return res.status(400).json({ message: primeiraMensagemZod(validado) });
     }
-    const { cliente_id, status, desconto, observacoes, validade_dias, itens } =
+    const { cliente_id, veiculo_id, status, desconto, observacoes, validade_dias, itens } =
       validado.data;
 
     // Busca o atual (com dono) para completar os campos que nao vieram
     const { data: atual, error: errAtual } = await supabase
       .from("orcamentos")
-      .select("cliente_id, status, desconto, total, observacoes, validade_dias")
+      .select("cliente_id, veiculo_id, status, desconto, total, observacoes, validade_dias")
       .eq("id", id)
       .eq("user_id", req.userId)
       .maybeSingle();
@@ -314,6 +328,9 @@ router.put("/:id", async (req, res, next) => {
 
     // Define os valores finais do cabecalho
     const clienteFinal = cliente_id !== undefined ? cliente_id : atual.cliente_id;
+    // Veículo: veio no pedido usa ele (uuid ou null = limpar); senão mantém
+    const veiculoFinal =
+      veiculo_id !== undefined ? veiculo_id : atual.veiculo_id;
     const statusFinal = status !== undefined ? status : atual.status;
     const validadeFinal =
       validade_dias !== undefined ? Number(validade_dias) : atual.validade_dias;
@@ -373,6 +390,7 @@ router.put("/:id", async (req, res, next) => {
         p_observacoes: observacoesFinal,
         p_validade_dias: validadeFinal,
         p_itens: itensJson,
+        p_veiculo_id: veiculoFinal,
       },
     );
 
@@ -383,6 +401,11 @@ router.put("/:id", async (req, res, next) => {
       }
       if (msg.includes("CLIENTE_INVALIDO")) {
         return res.status(400).json({ message: "Cliente inválido." });
+      }
+      if (msg.includes("VEICULO_INVALIDO")) {
+        return res
+          .status(400)
+          .json({ message: "Escolha um veículo válido deste cliente." });
       }
       if (
         msg.includes("ITENS_OBRIGATORIOS") ||
@@ -398,7 +421,9 @@ router.put("/:id", async (req, res, next) => {
 
     const { data, error } = await supabase
       .from("orcamentos")
-      .select("*, clientes(nome, veiculo, placa, telefone), orcamento_itens(*)")
+      .select(
+        "*, clientes(nome, veiculo, placa, telefone), veiculos(veiculo, placa), orcamento_itens(*)",
+      )
       .eq("id", id)
       .eq("user_id", req.userId)
       .single();

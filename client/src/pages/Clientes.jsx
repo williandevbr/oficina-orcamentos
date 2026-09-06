@@ -1,19 +1,22 @@
-import { Users, Plus, Pencil, Trash2, Search, X } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Search, X, Car } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import ClienteForm from "../components/ClienteForm.jsx";
+import VeiculosModal from "../components/VeiculosModal.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import Paginacao from "../components/Paginacao.jsx";
 import { SkeletonTabela } from "../components/Skeleton.jsx";
-import { mascararTelefone, mascararPlaca } from "../utils/mascaras.js";
+import { mascararTelefone } from "../utils/mascaras.js";
 import { apiFetch } from "../lib/api.js";
 
 // ============================================================
 // Página de Clientes - CRUD completo (busca e paginação no servidor)
+// Veículos ficam em cadastro separado: 1 cliente -> N veículos.
 // ============================================================
 
 const API = "/api/clientes";
+const API_VEICULOS = "/api/veiculos";
 const POR_PAGINA = 8;
 
 // Fábrica: cada "novo" ganha um objeto próprio (sem referência compartilhada)
@@ -24,8 +27,6 @@ function criarFormVazio() {
     email: "",
     documento: "",
     endereco: "",
-    veiculo: "",
-    placa: "",
     observacoes: "",
   };
 }
@@ -38,8 +39,6 @@ function extrairForm(cliente = {}) {
     email: cliente.email || "",
     documento: cliente.documento || "",
     endereco: cliente.endereco || "",
-    veiculo: cliente.veiculo || "",
-    placa: cliente.placa || "",
     observacoes: cliente.observacoes || "",
   };
 }
@@ -71,6 +70,12 @@ export default function Clientes() {
   const [idParaExcluir, setIdParaExcluir] = useState(null);
   const [excluindo, setExcluindo] = useState(false);
 
+  // Veículos: todos carregados uma vez (1 cliente -> N veículos)
+  const [veiculos, setVeiculos] = useState([]);
+  const [veiculosDe, setVeiculosDe] = useState(null); // cliente com modal aberto
+  const [erroVeiculo, setErroVeiculo] = useState("");
+  const [salvandoVeiculo, setSalvandoVeiculo] = useState(false);
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -99,6 +104,12 @@ export default function Clientes() {
     return () => controle.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagina, buscaDebounced]);
+
+  // Veículos: carrega uma vez (independe da página/busca)
+  useEffect(() => {
+    carregarVeiculos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const inicio = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
   const fim = Math.min(pagina * POR_PAGINA, total);
@@ -162,8 +173,68 @@ export default function Clientes() {
   function aoMudarForm(campo, valor) {
     let final = valor;
     if (campo === "telefone") final = mascararTelefone(valor);
-    if (campo === "placa") final = mascararPlaca(valor);
     setForm((atual) => ({ ...atual, [campo]: final }));
+  }
+
+  // Mapa cliente_id -> lista de veículos (para a coluna da tabela)
+  const veiculosDoCliente = (clienteId) =>
+    veiculos.filter((v) => v.cliente_id === clienteId);
+
+  async function carregarVeiculos() {
+    try {
+      const resp = await apiFetch(API_VEICULOS);
+      const dados = await lerJsonSeguro(resp);
+      if (!resp.ok) return; // tabela nova pode não existir ainda: segue sem travar
+      setVeiculos(Array.isArray(dados) ? dados : dados.data || []);
+    } catch {
+      // Sem veículos por enquanto (offline ou migration pendente)
+    }
+  }
+
+  async function adicionarVeiculo({ veiculo, placa }) {
+    if (!veiculosDe) return;
+    try {
+      setSalvandoVeiculo(true);
+      setErroVeiculo("");
+      const resp = await apiFetch(API_VEICULOS, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cliente_id: veiculosDe.id,
+          veiculo,
+          placa: placa || undefined,
+        }),
+      });
+      const dados = await lerJsonSeguro(resp);
+      if (!resp.ok) {
+        setErroVeiculo(dados.message || "Erro ao salvar o veículo.");
+        return;
+      }
+      setVeiculos((atual) => [dados, ...atual]);
+      toast.success("Veículo adicionado!");
+    } catch {
+      setErroVeiculo("Erro de conexão com o servidor.");
+    } finally {
+      setSalvandoVeiculo(false);
+    }
+  }
+
+  async function excluirVeiculo(id) {
+    try {
+      setSalvandoVeiculo(true);
+      setErroVeiculo("");
+      const resp = await apiFetch(`${API_VEICULOS}/${id}`, {
+        method: "DELETE",
+      });
+      const dados = await lerJsonSeguro(resp);
+      if (!resp.ok) throw new Error(dados.message || "Não foi possível excluir.");
+      setVeiculos((atual) => atual.filter((v) => v.id !== id));
+      toast.success("Veículo removido!");
+    } catch (e) {
+      setErroVeiculo(e.message || "Não foi possível excluir.");
+    } finally {
+      setSalvandoVeiculo(false);
+    }
   }
 
   async function salvar(evento) {
@@ -326,13 +397,14 @@ export default function Clientes() {
               <tr>
                 <th className="px-5 py-3">Nome</th>
                 <th className="px-5 py-3">Telefone</th>
-                <th className="px-5 py-3">Veículo</th>
-                <th className="px-5 py-3">Placa</th>
+                <th className="px-5 py-3">Veículos</th>
                 <th className="px-5 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {clientes.map((cliente) => (
+              {clientes.map((cliente) => {
+                const lista = veiculosDoCliente(cliente.id);
+                return (
                 <tr key={cliente.id} className="hover:bg-blue-50/50">
                   <td className="px-5 py-3 font-medium text-slate-800">
                     {cliente.nome}
@@ -340,14 +412,47 @@ export default function Clientes() {
                   <td className="px-5 py-3 text-slate-500">
                     {cliente.telefone || "—"}
                   </td>
-                  <td className="px-5 py-3 text-slate-500">
-                    {cliente.veiculo || "—"}
-                  </td>
-                  <td className="px-5 py-3 text-slate-500">
-                    {cliente.placa || "—"}
+                  <td className="px-5 py-3">
+                    {lista.length === 0 ? (
+                      <span className="text-slate-400">—</span>
+                    ) : (
+                      <div className="flex max-w-56 flex-wrap gap-1">
+                        {lista.slice(0, 3).map((v) => (
+                          <span
+                            key={v.id}
+                            title={v.placa ? `${v.veiculo} • ${v.placa}` : v.veiculo}
+                            className="max-w-40 truncate rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700"
+                          >
+                            {v.veiculo}
+                          </span>
+                        ))}
+                        {lista.length > 3 && (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">
+                            +{lista.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVeiculosDe(cliente);
+                          setErroVeiculo("");
+                        }}
+                        title={`Veículos (${lista.length})`}
+                        aria-label={`Veículos de ${cliente.nome}`}
+                        className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-blue-100 hover:text-blue-700"
+                      >
+                        <Car className="h-4 w-4" />
+                        {lista.length > 0 && (
+                          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                            {lista.length}
+                          </span>
+                        )}
+                      </button>
                       <button
                         type="button"
                         onClick={() => abrirEdicao(cliente)}
@@ -369,7 +474,8 @@ export default function Clientes() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
           <Paginacao
@@ -393,6 +499,19 @@ export default function Clientes() {
           aoMudar={aoMudarForm}
           aoSalvar={salvar}
           aoFechar={fecharModal}
+        />
+      )}
+
+      {/* Modal de veículos do cliente */}
+      {veiculosDe && (
+        <VeiculosModal
+          clienteNome={veiculosDe.nome}
+          veiculos={veiculosDoCliente(veiculosDe.id)}
+          salvando={salvandoVeiculo}
+          erro={erroVeiculo}
+          onAdicionar={adicionarVeiculo}
+          onExcluir={excluirVeiculo}
+          onFechar={() => setVeiculosDe(null)}
         />
       )}
 

@@ -177,6 +177,12 @@ const validadeSchema = z.coerce
 
 export const orcamentoCriarSchema = z.object({
   cliente_id: uuidSchema("Escolha um cliente válido para o orçamento."),
+  // Veículo do atendimento (opcional; "" vira null = sem veículo específico)
+  veiculo_id: z
+    .preprocess(
+      (v) => (v === "" ? null : v),
+      uuidSchema("Veículo inválido.").nullable().optional(),
+    ),
   status: z
     .enum(STATUS_VALIDOS, {
       error: `Status inválido. Use: ${STATUS_VALIDOS.join(", ")}.`,
@@ -194,6 +200,11 @@ export const orcamentoCriarSchema = z.object({
 export const orcamentoAtualizarSchema = z
   .object({
     cliente_id: uuidSchema("Cliente inválido.").optional(),
+    veiculo_id: z
+      .preprocess(
+        (v) => (v === "" ? null : v),
+        uuidSchema("Veículo inválido.").nullable().optional(),
+      ),
     status: z
       .enum(STATUS_VALIDOS, {
         error: `Status inválido. Use: ${STATUS_VALIDOS.join(", ")}.`,
@@ -210,6 +221,7 @@ export const orcamentoAtualizarSchema = z
   .refine(
     (v) =>
       v.cliente_id !== undefined ||
+      v.veiculo_id !== undefined ||
       v.status !== undefined ||
       v.desconto !== undefined ||
       v.observacoes !== undefined ||
@@ -217,6 +229,50 @@ export const orcamentoAtualizarSchema = z
       v.itens !== undefined,
     { message: "Nada para atualizar.", path: [] },
   );
+
+// ---------- Veículos (1 cliente -> N veículos) ----------
+export const veiculoCriarSchema = z.object({
+  cliente_id: uuidSchema("Escolha um cliente válido para o veículo."),
+  veiculo: z
+    .string({ error: "Dê um nome ao veículo (ex.: Honda CG 160)." })
+    .trim()
+    .min(2, { error: "Nome do veículo curto demais (mínimo 2 letras)." })
+    .max(LIMITES.veiculoMax, {
+      error: "Veículo muito longo (máximo 80 letras).",
+    }),
+  placa: textoOpcional(
+    LIMITES.placaMax,
+    "Placa muito longa (máximo 10 caracteres).",
+  ),
+});
+
+export const veiculoAtualizarSchema = z
+  .object({
+    veiculo: z
+      .string({ error: "Nome do veículo inválido." })
+      .trim()
+      .min(2, { error: "Nome do veículo curto demais (mínimo 2 letras)." })
+      .max(LIMITES.veiculoMax, {
+        error: "Veículo muito longo (máximo 80 letras).",
+      })
+      .optional(),
+    // null ou "" = apagar a placa; undefined = não mexer
+    placa: z.preprocess(
+      (v) => (v === "" ? null : v),
+      z
+        .string({ error: "Placa inválida." })
+        .trim()
+        .max(LIMITES.placaMax, {
+          error: "Placa muito longa (máximo 10 caracteres).",
+        })
+        .nullable()
+        .optional(),
+    ),
+  })
+  .refine((v) => v.veiculo !== undefined || v.placa !== undefined, {
+    message: "Nada para atualizar.",
+    path: [],
+  });
 
 // ---------- Catálogo (peças e serviços) ----------
 export const catalogoSchema = z.object({
@@ -294,6 +350,33 @@ export const CAMPOS_CLIENTE = [
   "placa",
   "observacoes",
 ];
+
+// Campos permitidos no PUT de veículos (cliente_id nunca muda de dono)
+export const CAMPOS_VEICULO = ["veiculo", "placa"];
+
+export function filtrarCamposVeiculo(body = {}) {
+  const out = {};
+  for (const campo of CAMPOS_VEICULO) {
+    if (body[campo] !== undefined) out[campo] = body[campo];
+  }
+  // Normaliza: strings com trim; placa em maiúsculas; "" vira undefined
+  // (no PUT, "" na placa significa "apagar a placa" -> vira null no Zod)
+  for (const k of Object.keys(out)) {
+    if (typeof out[k] === "string") {
+      const t = out[k].trim();
+      if (t === "") {
+        if (k === "placa") {
+          out[k] = null;
+          continue;
+        }
+        delete out[k];
+        continue;
+      }
+      out[k] = k === "placa" ? t.toUpperCase() : t;
+    }
+  }
+  return out;
+}
 
 export function filtrarCamposCliente(body = {}) {
   const out = {};

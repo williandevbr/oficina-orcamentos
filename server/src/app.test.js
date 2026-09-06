@@ -144,6 +144,80 @@ describe("orçamentos (validação e paginação)", () => {
   });
 });
 
+describe("veículos (1 cliente -> N veículos)", () => {
+  it("GET sem crachá nega (401)", async () => {
+    const resp = await request(app).get("/api/veiculos");
+    expect(resp.status).toBe(401);
+  });
+
+  it("GET lista só do dono (filtra user_id)", async () => {
+    const filtros = [];
+    vi.spyOn(supabase, "from").mockImplementation(() =>
+      consultaFalsa(
+        {
+          data: [{ id: "v1", veiculo: "Honda CG 160", placa: "ABC1D23" }],
+          error: null,
+        },
+        filtros,
+      ),
+    );
+
+    const resp = await request(app)
+      .get("/api/veiculos")
+      .set("Authorization", "Bearer token-teste");
+
+    expect(resp.status).toBe(200);
+    expect(resp.body).toHaveLength(1);
+    expect(filtros).toContainEqual(["user_id", USER_ID]);
+  });
+
+  it("POST sem nome do veículo recusa (400) sem encostar na tabela", async () => {
+    const spyFrom = vi
+      .spyOn(supabase, "from")
+      .mockImplementation(() => consultaFalsa({ data: [], error: null }, []));
+
+    const resp = await request(app)
+      .post("/api/veiculos")
+      .set("Authorization", "Bearer token-teste")
+      .send({
+        cliente_id: "11111111-2222-3333-4444-555555555555",
+        placa: "ABC1D23",
+      });
+
+    expect(resp.status).toBe(400);
+    expect(spyFrom).not.toHaveBeenCalled();
+  });
+
+  it("POST com cliente de outro dono recusa (400)", async () => {
+    // 1ª chamada (clientes): dono não achado; 2ª nem acontece
+    vi.spyOn(supabase, "from").mockImplementation((tabela) => {
+      if (tabela === "clientes") {
+        return consultaFalsa({ data: null, error: null }, []);
+      }
+      return consultaFalsa({ data: null, error: null }, []);
+    });
+
+    const resp = await request(app)
+      .post("/api/veiculos")
+      .set("Authorization", "Bearer token-teste")
+      .send({
+        cliente_id: "11111111-2222-3333-4444-555555555555",
+        veiculo: "Honda CG 160",
+      });
+
+    expect(resp.status).toBe(400);
+    expect(resp.body.message).toMatch(/cliente/i);
+  });
+
+  it("DELETE com id inválido recusa (400)", async () => {
+    const resp = await request(app)
+      .delete("/api/veiculos/nao-uuid")
+      .set("Authorization", "Bearer token-teste");
+
+    expect(resp.status).toBe(400);
+  });
+});
+
 describe("catálogo (peças e serviços)", () => {
   it("GET sem crachá nega (401)", async () => {
     const resp = await request(app).get("/api/catalogo");

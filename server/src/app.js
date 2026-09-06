@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import { supabase } from "./lib/supabase.js";
 import { autenticar } from "./middlewares/autenticar.js";
 import clientesRouter from "./routes/clientes.js";
+import veiculosRouter from "./routes/veiculos.js";
 import orcamentosRouter from "./routes/orcamentos.js";
 import catalogoRouter from "./routes/catalogo.js";
 
@@ -90,6 +91,9 @@ app.get("/api/resumo", async (req, res, next) => {
 
 // Liga as rotas de clientes ao caminho /api/clientes
 app.use("/api/clientes", clientesRouter);
+
+// Liga as rotas de veículos ao caminho /api/veiculos
+app.use("/api/veiculos", veiculosRouter);
 
 // Liga as rotas de orçamentos ao caminho /api/orcamentos
 app.use("/api/orcamentos", orcamentosRouter);

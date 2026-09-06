@@ -9,9 +9,12 @@ import {
   statusValido,
   descontoValido,
   filtrarCamposCliente,
+  filtrarCamposVeiculo,
   clienteCriarSchema,
   orcamentoCriarSchema,
   orcamentoAtualizarSchema,
+  veiculoCriarSchema,
+  veiculoAtualizarSchema,
   catalogoSchema,
 } from "./validacao.js";
 
@@ -213,5 +216,77 @@ describe("catalogoSchema", () => {
     expect(
       catalogoSchema.safeParse({ ...itemOk, valor_unitario: -1 }).success,
     ).toBe(false);
+  });
+});
+
+describe("veículos (schemas e filtro)", () => {
+  const CLI = "550e8400-e29b-41d4-a716-446655440000";
+  const VEI = "11111111-2222-3333-4444-555555555555";
+  const veiOk = { cliente_id: CLI, veiculo: "Honda CG 160", placa: "abc1d23" };
+
+  it("aceita veículo válido e normaliza a placa", () => {
+    const r = veiculoCriarSchema.safeParse(veiOk);
+    expect(r.success).toBe(true);
+  });
+
+  it("recusa sem cliente, sem nome ou com placa longa", () => {
+    expect(
+      veiculoCriarSchema.safeParse({ veiculo: "Honda CG 160" }).success,
+    ).toBe(false);
+    expect(
+      veiculoCriarSchema.safeParse({ cliente_id: CLI, veiculo: "A" }).success,
+    ).toBe(false);
+    expect(
+      veiculoCriarSchema.safeParse({ ...veiOk, placa: "PLACA-LONGA-DEM" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("PUT vazio retorna 'Nada para atualizar'; null apaga a placa", () => {
+    expect(veiculoAtualizarSchema.safeParse({}).success).toBe(false);
+    const r = veiculoAtualizarSchema.safeParse({ placa: null });
+    expect(r.success).toBe(true);
+    expect(r.data.placa).toBeNull();
+  });
+
+  it("filtrarCamposVeiculo bloqueia cliente_id e normaliza placa", () => {
+    const out = filtrarCamposVeiculo({
+      veiculo: "  Honda CG 160  ",
+      placa: "abc1d23",
+      cliente_id: "x",
+    });
+    expect(out.veiculo).toBe("Honda CG 160");
+    expect(out.placa).toBe("ABC1D23");
+    expect(out.cliente_id).toBeUndefined();
+  });
+
+  it("orçamento aceita veiculo_id válido e recusa inválido", () => {
+    const base = {
+      cliente_id: CLI,
+      itens: [
+        {
+          descricao: "Troca de oleo",
+          tipo: "servico",
+          quantidade: 1,
+          valor_unitario: 100,
+        },
+      ],
+    };
+    expect(
+      orcamentoCriarSchema.safeParse({ ...base, veiculo_id: VEI }).success,
+    ).toBe(true);
+    expect(
+      orcamentoCriarSchema.safeParse({ ...base, veiculo_id: "nao-uuid" })
+        .success,
+    ).toBe(false);
+    // "" = sem veículo específico
+    const r = orcamentoCriarSchema.safeParse({ ...base, veiculo_id: "" });
+    expect(r.success).toBe(true);
+    expect(r.data.veiculo_id).toBeNull();
+  });
+
+  it("PUT de orçamento só com veiculo_id é atualização válida", () => {
+    const r = orcamentoAtualizarSchema.safeParse({ veiculo_id: VEI });
+    expect(r.success).toBe(true);
   });
 });
