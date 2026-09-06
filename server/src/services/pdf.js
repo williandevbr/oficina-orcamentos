@@ -4,36 +4,41 @@ import path from "path";
 import { calcularTotais, totalLinha } from "./calculo.js";
 
 // ============================================================
-// Geração do PDF de ORÇAMENTO (design limpo e moderno)
+// Geração do PDF de ORÇAMENTO
+// Fonte: Poppins (moderna, profissional)
+// Layout: página inteira, fundo suave, assinatura automática
 // ============================================================
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fontsDir = path.resolve(__dirname, "..", "..", "fonts");
 
 pdfmake.addFonts({
-  Roboto: {
-    normal: path.join(fontsDir, "Roboto-Regular.ttf"),
-    bold: path.join(fontsDir, "Roboto-Medium.ttf"),
-    italics: path.join(fontsDir, "Roboto-Italic.ttf"),
-    bolditalics: path.join(fontsDir, "Roboto-MediumItalic.ttf"),
+  Poppins: {
+    normal: path.join(fontsDir, "Poppins-Regular.ttf"),
+    bold: path.join(fontsDir, "Poppins-Medium.ttf"),
+    italics: path.join(fontsDir, "Poppins-Regular.ttf"),
+    bolditalics: path.join(fontsDir, "Poppins-SemiBold.ttf"),
   },
 });
 
 pdfmake.setLocalAccessPolicy((caminho) => caminho.startsWith(fontsDir));
 
-// Paleta: azul suave + grafite escuro (moderno, profissional, sem agressividade)
-const COR_PRIMARIA = "#2563eb";     // azul vibrante
-const COR_ESCURA = "#1e3a5f";       // azul escuro profundo
-const COR_MEDIA = "#3b82f6";        // azul médio
-const COR_BAIXA = "#dbeafe";        // azul claro suave
-const COR_FUNDO = "#f8fafc";        // cinza claro quase branco
-const TEXTO = "#0f172a";            // preto suave
-const TEXTO_MEDIO = "#475569";      // cinza texto
-const TEXTO_BAIXA = "#94a3b8";      // cinza leve
+// ============================================================
+// PALETA — azul suave, fundo cinza-azulado, contraste limpo
+// ============================================================
+const AZUL = "#2563eb";
+const AZUL_ESCURO = "#1e40af";
+const AZUL_CLARO = "#dbeafe";
+const AZUL_FONDO = "#eff6ff";
+const FUNDO = "#f1f5f9";
+const TEXTO = "#0f172a";
+const TEXTO_MEDIO = "#334155";
+const TEXTO_LEVE = "#64748b";
+const TEXTO_BAIXO = "#94a3b8";
 const VERDE = "#16a34a";
 const BRANCO = "#ffffff";
+const LARANJA = "#f97316";
 
-// Formata moeda como R$
 function formatarMoeda(valor) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -64,20 +69,95 @@ const corStatus = {
   expirado: "#d97706",
 };
 
-// Tabela sem bordas (limpa)
 const semBorda = {
   hLineWidth: () => 0,
   vLineWidth: () => 0,
 };
 
-// Linha fina de separação
-const linhaFina = {
-  hLineWidth: () => 0.5,
-  vLineWidth: () => 0,
-  hLineColor: () => "#e2e8f0",
-  vLineColor: () => "#e2e8f0",
-};
+// ============================================================
+// ASSINATURA DIGITAL AUTOMÁTICA
+// Gera uma "assinatura manuscrita" usando traços do pdfmake
+// ============================================================
+function gerarAssinatura(nomeProprietario) {
+  const largura = 180;
+  const altura = 40;
 
+  // Pontos de uma assinatura estilizada (curva suave + traço final)
+  const pontos = [
+    { x: 10, y: 30 },
+    { x: 20, y: 10 },
+    { x: 35, y: 35 },
+    { x: 50, y: 8 },
+    { x: 60, y: 28 },
+    { x: 75, y: 12 },
+    { x: 85, y: 30 },
+    { x: 100, y: 15 },
+    { x: 115, y: 32 },
+    { x: 125, y: 18 },
+    { x: 140, y: 28 },
+    { x: 155, y: 20 },
+    { x: 170, y: 25 },
+  ];
+
+  return {
+    stack: [
+      // Traços da assinatura (linhas conectadas)
+      {
+        canvas: pontos.map((p, i) => {
+          if (i === 0) return null;
+          const anterior = pontos[i - 1];
+          return {
+            type: "line",
+            x1: anterior.x,
+            y1: anterior.y,
+            x2: p.x,
+            y2: p.y,
+            lineWidth: 1.2,
+            lineColor: AZUL_ESCURO,
+          };
+        }).filter(Boolean),
+        width: largura,
+        height: altura,
+      },
+      // Linha abaixo da assinatura
+      {
+        canvas: [
+          {
+            type: "line",
+            x1: 0,
+            y1: 0,
+            x2: largura,
+            y2: 0,
+            lineWidth: 0.5,
+            lineColor: "#cbd5e1",
+          },
+        ],
+        margin: [0, 0, 0, 2],
+      },
+      // Nome do proprietário
+      {
+        text: nomeProprietario,
+        fontSize: 8,
+        bold: true,
+        color: TEXTO_MEDIO,
+        alignment: "center",
+      },
+      // Data e hora da assinatura
+      {
+        text: `Assinado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
+        fontSize: 6,
+        color: TEXTO_LEVE,
+        alignment: "center",
+        margin: [0, 1, 0, 0],
+      },
+    ],
+    width: largura,
+  };
+}
+
+// ============================================================
+// DOCUMENT DEFINITION
+// ============================================================
 export async function gerarPdfOrcamento(orcamento) {
   const cliente = orcamento.clientes || {};
   const itens = orcamento.orcamento_itens || [];
@@ -139,254 +219,183 @@ export async function gerarPdfOrcamento(orcamento) {
     .filter(Boolean)
     .join("  •  ");
 
-  // ============================================================
-  // DOCUMENT DEFINITION — layout limpo e elegante
+  // Assinatura automática do proprietário
+  const assinatura = gerarAssinatura(oficina.nome);
+
   // ============================================================
   const docDefinition = {
     pageSize: "A4",
-    pageMargins: [40, 50, 40, 50],
+    pageMargins: [30, 30, 30, 30],
+    background: () => ({
+      canvas: [
+        {
+          type: "rect",
+          x: 0,
+          y: 0,
+          w: 595.28,
+          h: 841.89,
+          r: 0,
+          color: FUNDO,
+        },
+      ],
+    }),
     defaultStyle: {
-      font: "Roboto",
+      font: "Poppins",
       fontSize: 9,
-      lineHeight: 1.3,
+      lineHeight: 1.35,
       color: TEXTO,
     },
 
     content: [
-      // ── TOPO: nome da oficina + orçamento Nº ──
+      // ============================================================
+      // TOPO: faixa azul escura com nome + número
+      // ============================================================
       {
-        columns: [
-          // Lado esquerdo: nome + contato
-          {
-            width: "*",
-            stack: [
+        table: {
+          widths: ["*"],
+          body: [
+            [
               {
-                text: oficina.nome,
-                bold: true,
-                fontSize: 22,
-                color: COR_ESCURA,
-              },
-              {
-                text: [oficina.telefone, oficina.endereco, oficina.cnpj]
-                  .filter(Boolean)
-                  .join("  •  "),
-                fontSize: 8,
-                color: TEXTO_BAIXA,
-                margin: [0, 2, 0, 0],
+                columns: [
+                  {
+                    width: "*",
+                    stack: [
+                      {
+                        text: oficina.nome.toUpperCase(),
+                        bold: true,
+                        fontSize: 20,
+                        color: BRANCO,
+                      },
+                      {
+                        text: oficina.telefone || "",
+                        fontSize: 8,
+                        color: "#bfdbfe",
+                        margin: [0, 2, 0, 0],
+                      },
+                    ],
+                  },
+                  {
+                    width: "auto",
+                    stack: [
+                      {
+                        text: "ORÇAMENTO",
+                        bold: true,
+                        fontSize: 18,
+                        color: BRANCO,
+                        alignment: "right",
+                      },
+                      {
+                        text: `Nº ${numero}`,
+                        fontSize: 12,
+                        color: "#bfdbfe",
+                        alignment: "right",
+                        margin: [0, 1, 0, 0],
+                      },
+                    ],
+                  },
+                ],
+                columnGap: 20,
+                fillColor: AZUL_ESCURO,
+                margin: [20, 16, 20, 16],
               },
             ],
-          },
-          // Lado direito: ORÇAMENTO + número
-          {
-            width: "auto",
-            stack: [
-              {
-                text: "ORÇAMENTO",
-                bold: true,
-                fontSize: 14,
-                color: COR_PRIMARIA,
-                alignment: "right",
-              },
-              {
-                text: `Nº ${numero}`,
-                fontSize: 10,
-                color: TEXTO_MEDIO,
-                alignment: "right",
-                margin: [0, 1, 0, 0],
-              },
-            ],
-          },
-        ],
-        columnGap: 20,
-        margin: [0, 0, 0, 6],
+          ],
+        },
+        layout: semBorda,
+        margin: [0, 0, 0, 12],
       },
 
-      // Linha separadora
+      // ============================================================
+      // INFO: cliente / veículo / validade / status (4 colunas)
+      // ============================================================
       {
-        canvas: [
-          {
-            type: "line",
-            x1: 0,
-            y1: 0,
-            x2: 515,
-            y2: 0,
-            lineWidth: 1.5,
-            lineColor: COR_PRIMARIA,
-          },
-        ],
-        margin: [0, 0, 0, 16],
+        table: {
+          widths: ["*", "*", "*", "auto"],
+          body: [
+            [
+              {
+                stack: [
+                  { text: "CLIENTE", fontSize: 7, bold: true, color: AZUL, margin: [0, 0, 0, 2] },
+                  { text: (cliente.nome || "—").toUpperCase(), bold: true, fontSize: 10, color: TEXTO },
+                  { text: cliente.telefone || "", fontSize: 8, color: TEXTO_MEDIO, margin: [0, 1, 0, 0] },
+                ],
+                fillColor: BRANCO,
+                margin: [10, 8, 10, 8],
+              },
+              {
+                stack: [
+                  { text: "VEÍCULO", fontSize: 7, bold: true, color: AZUL, margin: [0, 0, 0, 2] },
+                  { text: linhaVeiculo || "—", fontSize: 9, color: TEXTO },
+                ],
+                fillColor: BRANCO,
+                margin: [10, 8, 10, 8],
+              },
+              {
+                stack: [
+                  { text: "VALIDADE", fontSize: 7, bold: true, color: AZUL, margin: [0, 0, 0, 2] },
+                  { text: `${validoAteTxt}`, bold: true, fontSize: 9, color: TEXTO },
+                  { text: `Protocolo: ${protocolo}`, fontSize: 7, color: TEXTO_LEVE, margin: [0, 1, 0, 0] },
+                ],
+                fillColor: BRANCO,
+                margin: [10, 8, 10, 8],
+              },
+              {
+                stack: [
+                  { text: "STATUS", fontSize: 7, bold: true, color: AZUL, margin: [0, 0, 0, 2] },
+                  { text: textoStatus, bold: true, fontSize: 10, color: corSelo },
+                ],
+                fillColor: BRANCO,
+                margin: [10, 8, 10, 8],
+              },
+            ],
+          ],
+        },
+        layout: semBorda,
+        margin: [0, 0, 0, 12],
       },
 
-      // ── INFORMAÇÕES: cliente / veículo / validade / status ──
-      {
-        columns: [
-          // Cliente
-          {
-            width: "*",
-            stack: [
-              {
-                text: "CLIENTE",
-                fontSize: 7,
-                bold: true,
-                color: COR_PRIMARIA,
-                margin: [0, 0, 0, 2],
-              },
-              {
-                text: (cliente.nome || "—").toUpperCase(),
-                bold: true,
-                fontSize: 10,
-                color: TEXTO,
-              },
-              {
-                text: cliente.telefone || "",
-                fontSize: 8,
-                color: TEXTO_MEDIO,
-                margin: [0, 1, 0, 0],
-              },
-            ],
-          },
-          // Veículo
-          {
-            width: "*",
-            stack: [
-              {
-                text: "VEÍCULO",
-                fontSize: 7,
-                bold: true,
-                color: COR_PRIMARIA,
-                margin: [0, 0, 0, 2],
-              },
-              {
-                text: linhaVeiculo || "—",
-                fontSize: 9,
-                color: TEXTO,
-              },
-            ],
-          },
-          // Validade
-          {
-            width: "auto",
-            stack: [
-              {
-                text: "VALIDADE",
-                fontSize: 7,
-                bold: true,
-                color: COR_PRIMARIA,
-                margin: [0, 0, 0, 2],
-              },
-              {
-                text: `Emitido: ${dataEmissao}`,
-                fontSize: 8,
-                color: TEXTO_MEDIO,
-              },
-              {
-                text: `Válido até: ${validoAteTxt}`,
-                fontSize: 8,
-                bold: true,
-                color: TEXTO,
-              },
-            ],
-          },
-          // Status
-          {
-            width: "auto",
-            stack: [
-              {
-                text: "STATUS",
-                fontSize: 7,
-                bold: true,
-                color: COR_PRIMARIA,
-                margin: [0, 0, 0, 2],
-              },
-              {
-                text: textoStatus,
-                bold: true,
-                fontSize: 10,
-                color: corSelo,
-              },
-            ],
-          },
-        ],
-        columnGap: 15,
-        margin: [0, 0, 0, 18],
-      },
-
-      // ── TABELA DE ITENS (limpa, com linhas sutis) ──
+      // ============================================================
+      // TABELA DE ITENS
+      // ============================================================
       {
         table: {
           headerRows: 1,
-          widths: ["*", "12%", "10%", "18%", "18%"],
+          widths: ["*", "12%", "10%", "17%", "17%"],
           body: [
-            // Cabeçalho
             [
-              {
-                text: "DESCRIÇÃO",
-                bold: true,
-                fontSize: 7,
-                color: COR_PRIMARIA,
-                fillColor: COR_BAIXA,
-              },
-              {
-                text: "TIPO",
-                bold: true,
-                fontSize: 7,
-                color: COR_PRIMARIA,
-                fillColor: COR_BAIXA,
-                alignment: "center",
-              },
-              {
-                text: "QTD",
-                bold: true,
-                fontSize: 7,
-                color: COR_PRIMARIA,
-                fillColor: COR_BAIXA,
-                alignment: "center",
-              },
-              {
-                text: "VALOR UNIT.",
-                bold: true,
-                fontSize: 7,
-                color: COR_PRIMARIA,
-                fillColor: COR_BAIXA,
-                alignment: "right",
-              },
-              {
-                text: "TOTAL",
-                bold: true,
-                fontSize: 7,
-                color: COR_PRIMARIA,
-                fillColor: COR_BAIXA,
-                alignment: "right",
-              },
+              { text: "DESCRIÇÃO", bold: true, fontSize: 7, color: AZUL, fillColor: AZUL_CLARO },
+              { text: "TIPO", bold: true, fontSize: 7, color: AZUL, fillColor: AZUL_CLARO, alignment: "center" },
+              { text: "QTD", bold: true, fontSize: 7, color: AZUL, fillColor: AZUL_CLARO, alignment: "center" },
+              { text: "UNITÁRIO", bold: true, fontSize: 7, color: AZUL, fillColor: AZUL_CLARO, alignment: "right" },
+              { text: "TOTAL", bold: true, fontSize: 7, color: AZUL, fillColor: AZUL_CLARO, alignment: "right" },
             ],
-            // Itens
             ...itensCalc.map((item, i) => [
               {
                 text: item.descricao,
                 fontSize: 9,
                 color: TEXTO,
-                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+                fillColor: i % 2 ? BRANCO : AZUL_FONDO,
               },
               {
                 text: item.tipo === "peca" ? "Peça" : "Serviço",
                 fontSize: 8,
                 color: TEXTO_MEDIO,
                 alignment: "center",
-                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+                fillColor: i % 2 ? BRANCO : AZUL_FONDO,
               },
               {
                 text: String(Number(item.quantidade)),
                 fontSize: 9,
                 color: TEXTO_MEDIO,
                 alignment: "center",
-                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+                fillColor: i % 2 ? BRANCO : AZUL_FONDO,
               },
               {
                 text: formatarMoeda(item.valor_unitario),
                 fontSize: 9,
                 color: TEXTO_MEDIO,
                 alignment: "right",
-                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+                fillColor: i % 2 ? BRANCO : AZUL_FONDO,
               },
               {
                 text: formatarMoeda(item.total),
@@ -394,24 +403,26 @@ export async function gerarPdfOrcamento(orcamento) {
                 bold: true,
                 color: TEXTO,
                 alignment: "right",
-                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+                fillColor: i % 2 ? BRANCO : AZUL_FONDO,
               },
             ]),
           ],
         },
         layout: {
-          hLineWidth: (i) => (i === 0 || i === 1 ? 0.5 : 0.3),
+          hLineWidth: (i) => (i === 0 || i === 1 ? 0.5 : 0.2),
           vLineWidth: () => 0,
-          hLineColor: () => "#e2e8f0",
-          paddingTop: () => 8,
-          paddingBottom: () => 8,
+          hLineColor: () => "#cbd5e1",
+          paddingTop: () => 7,
+          paddingBottom: () => 7,
           paddingLeft: () => 10,
           paddingRight: () => 10,
         },
-        margin: [0, 0, 0, 14],
+        margin: [0, 0, 0, 12],
       },
 
-      // ── TOTAIS (alinhado à direita, limpo) ──
+      // ============================================================
+      // TOTAIS
+      // ============================================================
       {
         columns: [
           { width: "*", text: "" },
@@ -422,59 +433,25 @@ export async function gerarPdfOrcamento(orcamento) {
               body: [
                 [
                   { text: "Peças", fontSize: 9, color: TEXTO_MEDIO },
-                  {
-                    text: formatarMoeda(subtotalPecas),
-                    fontSize: 9,
-                    color: TEXTO,
-                    alignment: "right",
-                  },
+                  { text: formatarMoeda(subtotalPecas), fontSize: 9, color: TEXTO, alignment: "right" },
                 ],
                 [
                   { text: "Mão de obra", fontSize: 9, color: TEXTO_MEDIO },
-                  {
-                    text: formatarMoeda(subtotalServicos),
-                    fontSize: 9,
-                    color: TEXTO,
-                    alignment: "right",
-                  },
+                  { text: formatarMoeda(subtotalServicos), fontSize: 9, color: TEXTO, alignment: "right" },
                 ],
                 [
-                  {
-                    text: "",
-                    border: [false, true, false, false],
-                  },
-                  {
-                    text: "",
-                    border: [false, true, false, false],
-                  },
+                  { text: "", border: [false, true, false, false] },
+                  { text: "", border: [false, true, false, false] },
                 ],
                 [
-                  {
-                    text: "Subtotal",
-                    fontSize: 9,
-                    color: TEXTO_MEDIO,
-                  },
-                  {
-                    text: formatarMoeda(subtotal),
-                    fontSize: 9,
-                    color: TEXTO,
-                    alignment: "right",
-                  },
+                  { text: "Subtotal", fontSize: 9, color: TEXTO_MEDIO },
+                  { text: formatarMoeda(subtotal), fontSize: 9, color: TEXTO, alignment: "right" },
                 ],
                 ...(desconto > 0
                   ? [
                       [
-                        {
-                          text: "Desconto",
-                          fontSize: 9,
-                          color: TEXTO_MEDIO,
-                        },
-                        {
-                          text: `− ${formatarMoeda(desconto)}`,
-                          fontSize: 9,
-                          color: VERDE,
-                          alignment: "right",
-                        },
+                        { text: "Desconto", fontSize: 9, color: TEXTO_MEDIO },
+                        { text: `− ${formatarMoeda(desconto)}`, fontSize: 9, color: VERDE, alignment: "right" },
                       ],
                     ]
                   : []),
@@ -486,47 +463,33 @@ export async function gerarPdfOrcamento(orcamento) {
         margin: [0, 0, 0, 8],
       },
 
-      // ── TOTAL GERAL (destaque elegante) ──
+      // ============================================================
+      // TOTAL GERAL (destaque)
+      // ============================================================
       {
-        columns: [
-          { width: "*", text: "" },
-          {
-            width: "45%",
-            table: {
-              widths: ["*", "auto"],
-              body: [
-                [
-                  {
-                    text: "TOTAL",
-                    bold: true,
-                    fontSize: 11,
-                    color: COR_ESCURA,
-                  },
-                  {
-                    text: formatarMoeda(total),
-                    bold: true,
-                    fontSize: 16,
-                    color: COR_PRIMARIA,
-                    alignment: "right",
-                  },
+        table: {
+          widths: ["*"],
+          body: [
+            [
+              {
+                columns: [
+                  { width: "*", text: "TOTAL GERAL", bold: true, fontSize: 12, color: AZUL_ESCURO },
+                  { width: "auto", text: formatarMoeda(total), bold: true, fontSize: 18, color: AZUL, alignment: "right" },
                 ],
-              ],
-            },
-            layout: {
-              hLineWidth: () => 0,
-              vLineWidth: () => 0,
-              fillColor: () => COR_BAIXA,
-              paddingTop: () => 10,
-              paddingBottom: () => 10,
-              paddingLeft: () => 12,
-              paddingRight: () => 12,
-            },
-          },
-        ],
-        margin: [0, 0, 0, 16],
+                columnGap: 10,
+                fillColor: AZUL_CLARO,
+                margin: [14, 10, 14, 10],
+              },
+            ],
+          ],
+        },
+        layout: semBorda,
+        margin: [0, 0, 0, 14],
       },
 
-      // ── OBSERVAÇÕES (se houver) ──
+      // ============================================================
+      // OBSERVAÇÕES (se houver)
+      // ============================================================
       ...(orcamento.observacoes
         ? [
             {
@@ -536,32 +499,24 @@ export async function gerarPdfOrcamento(orcamento) {
                   [
                     {
                       stack: [
-                        {
-                          text: "OBSERVAÇÕES",
-                          fontSize: 7,
-                          bold: true,
-                          color: COR_PRIMARIA,
-                          margin: [0, 0, 0, 3],
-                        },
-                        {
-                          text: orcamento.observacoes,
-                          fontSize: 9,
-                          color: TEXTO_MEDIO,
-                        },
+                        { text: "OBSERVAÇÕES", fontSize: 7, bold: true, color: AZUL, margin: [0, 0, 0, 2] },
+                        { text: orcamento.observacoes, fontSize: 9, color: TEXTO_MEDIO },
                       ],
-                      fillColor: COR_FUNDO,
+                      fillColor: BRANCO,
                       margin: [10, 8, 10, 8],
                     },
                   ],
                 ],
               },
               layout: semBorda,
-              margin: [0, 0, 0, 16],
+              margin: [0, 0, 0, 14],
             },
           ]
         : []),
 
-      // ── ACEITE + ASSINATURA ──
+      // ============================================================
+      // ACEITE + ASSINATURA
+      // ============================================================
       {
         columns: [
           {
@@ -575,70 +530,55 @@ export async function gerarPdfOrcamento(orcamento) {
               {
                 text:
                   orcamento.status === "aprovado"
-                    ? `Aprovado • Protocolo ${protocolo || "—"}. Guarde este PDF como comprovante.`
+                    ? `Aprovado • Protocolo ${protocolo || "—"} • Guarde este PDF como comprovante.`
                     : `Para aprovar, responda este PDF no WhatsApp da oficina informando o protocolo ${protocolo || "—"}.`,
                 fontSize: 7,
-                color: TEXTO_BAIXA,
-                margin: [0, 2, 0, 0],
+                color: TEXTO_BAIXO,
+                margin: [0, 3, 0, 0],
               },
               {
                 text: "Obrigado pela preferência!",
                 bold: true,
                 fontSize: 10,
-                color: COR_PRIMARIA,
-                margin: [0, 10, 0, 0],
+                color: AZUL,
+                margin: [0, 8, 0, 0],
               },
             ],
           },
-          {
-            width: "auto",
-            stack: [
-              { text: "", margin: [0, 24, 0, 0] },
-              {
-                canvas: [
-                  {
-                    type: "line",
-                    x1: 0,
-                    y1: 0,
-                    x2: 180,
-                    y2: 0,
-                    lineWidth: 0.8,
-                    lineColor: "#cbd5e1",
-                  },
-                ],
-              },
-              {
-                text: `${oficina.nome}  •  ${cliente.nome || "cliente"}`,
-                fontSize: 7,
-                color: TEXTO_BAIXA,
-                alignment: "center",
-                margin: [0, 4, 0, 0],
-              },
-            ],
-            alignment: "right",
-          },
+          assinatura,
         ],
         columnGap: 30,
       },
     ],
 
-    // ── RODAPÉ ──
+    // ============================================================
+    // RODAPÉ
+    // ============================================================
     footer: (currentPage, pageCount) => ({
-      margin: [40, 0, 40, 0],
-      columns: [
-        {
-          text: `${oficina.nome}${oficina.cnpj ? ` • CNPJ: ${oficina.cnpj}` : ""} • Válido até ${validoAteTxt}`,
-          fontSize: 7,
-          color: TEXTO_BAIXA,
-          alignment: "left",
-        },
-        {
-          text: `Página ${currentPage} de ${pageCount}`,
-          fontSize: 7,
-          color: TEXTO_BAIXA,
-          alignment: "right",
-        },
-      ],
+      margin: [30, 0, 30, 0],
+      table: {
+        widths: ["*", "auto"],
+        body: [
+          [
+            {
+              text: `${oficina.nome}${oficina.cnpj ? ` • CNPJ: ${oficina.cnpj}` : ""} • Válido até ${validoAteTxt}`,
+              fontSize: 7,
+              color: TEXTO_BAIXO,
+              fillColor: BRANCO,
+              margin: [10, 6, 10, 6],
+            },
+            {
+              text: `Página ${currentPage} de ${pageCount}`,
+              fontSize: 7,
+              color: TEXTO_BAIXO,
+              fillColor: BRANCO,
+              alignment: "right",
+              margin: [10, 6, 10, 6],
+            },
+          ],
+        ],
+      },
+      layout: semBorda,
     }),
   };
 
