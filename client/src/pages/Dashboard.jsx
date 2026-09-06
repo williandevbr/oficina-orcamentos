@@ -1,9 +1,10 @@
-import { Users, FileText, CheckCircle2, Clock, Plus } from "lucide-react";
+import { Users, FileText, CheckCircle2, Clock, Plus, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import StatsCard from "../components/StatsCard.jsx";
 import { SkeletonStats, Skeleton } from "../components/Skeleton.jsx";
 import { formatarMoeda, formatarData, formatarNumero } from "../utils/format.js";
+import { calcularValidoAte } from "../utils/mascaras.js";
 import { apiFetch } from "../lib/api.js";
 
 // ============================================================
@@ -32,6 +33,8 @@ export default function Dashboard() {
   const [recentes, setRecentes] = useState([]);
   const [porStatus, setPorStatus] = useState([]);
   const [faturamento, setFaturamento] = useState(0);
+  const [vencidos, setVencidos] = useState(0);
+  const [vencendo, setVencendo] = useState(0);
 
   // Busca os números quando a página abre (com cancelamento)
   useEffect(() => {
@@ -81,10 +84,25 @@ export default function Dashboard() {
           : [];
       const contagem = {};
       let fat = 0;
+      let nVencidos = 0;
+      let nVencendo = 0;
+      const agora = new Date();
+      const limiteVencendo = new Date();
+      limiteVencendo.setDate(limiteVencendo.getDate() + 3);
       for (const o of arr) {
         contagem[o.status] = (contagem[o.status] || 0) + 1;
         if (o.status === "aprovado") fat += Number(o.total) || 0;
+        // Alerta de validade (só pendentes: rascunho/enviado)
+        if (o.status === "rascunho" || o.status === "enviado") {
+          const ate = calcularValidoAte(o.created_at, o.validade_dias);
+          if (ate) {
+            if (ate < agora) nVencidos += 1;
+            else if (ate <= limiteVencendo) nVencendo += 1;
+          }
+        }
       }
+      setVencidos(nVencidos);
+      setVencendo(nVencendo);
       setPorStatus(
         STATUS_LISTA.map((s) => ({ status: s, total: contagem[s] || 0 })),
       );
@@ -149,6 +167,42 @@ export default function Dashboard() {
           >
             Tentar novamente
           </button>
+        </div>
+      )}
+
+      {!carregando && !erro && (vencidos > 0 || vencendo > 0) && (
+        <div
+          role="alert"
+          className="mb-6 flex flex-col gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {vencidos > 0 && (
+              <span>
+                <strong>{vencidos}</strong> orçamento(s) vencido(s)
+                {vencendo > 0 && " • "}
+              </span>
+            )}
+            {vencendo > 0 && (
+              <span>
+                <strong>{vencendo}</strong> vencendo em até 3 dias
+              </span>
+            )}
+          </span>
+          <div className="flex gap-2">
+            <Link
+              to="/orcamentos?alerta=vencidos"
+              className="rounded-lg border border-amber-300 px-3 py-1 text-xs font-semibold hover:bg-amber-100"
+            >
+              Cobrar vencidos
+            </Link>
+            <Link
+              to="/orcamentos"
+              className="rounded-lg px-3 py-1 text-xs font-semibold text-amber-700 hover:underline"
+            >
+              Ver todos
+            </Link>
+          </div>
         </div>
       )}
 
