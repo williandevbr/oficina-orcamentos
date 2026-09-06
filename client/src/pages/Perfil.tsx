@@ -12,7 +12,7 @@ import { apiFetch } from "../lib/api";
 // Depois serve para trocar o nome quando quiser.
 // ============================================================
 
-async function lerJsonSeguro(resp) {
+async function lerJsonSeguro(resp: Response): Promise<any> {
   try {
     return await resp.json();
   } catch {
@@ -44,8 +44,13 @@ export default function Perfil() {
         if (!resp.ok) throw new Error(dados.message || "Não foi possível carregar o perfil.");
         setNome(dados.nome || "");
       } catch (e) {
-        if (e?.name === "AbortError" || controle.signal.aborted) return;
-        setErro(e.message || "Não foi possível carregar o perfil.");
+        if (controle.signal.aborted) return;
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setErro(
+          e instanceof Error || e instanceof DOMException
+            ? e.message || "Não foi possível carregar o perfil."
+            : "Não foi possível carregar o perfil.",
+        );
       } finally {
         if (!controle.signal.aborted) setCarregando(false);
       }
@@ -53,7 +58,7 @@ export default function Perfil() {
     return () => controle.abort();
   }, []);
 
-  async function salvar(e) {
+  async function salvar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (nome.trim().length < 2) {
       setErro("Digite seu nome (mínimo 2 letras).");
@@ -72,12 +77,13 @@ export default function Perfil() {
         setErro(dados.message || "Erro ao salvar.");
         return;
       }
+      const eraPrimeiraVez = primeiraVez;
       setPrimeiraVez(false);
       toast.success("Perfil salvo!");
       // Avisa o layout para liberar a navegação na hora
       window.dispatchEvent(new Event("perfil-atualizado"));
       // Primeira vez: segue para cadastrar a oficina
-      if (primeiraVez) {
+      if (eraPrimeiraVez) {
         navigate("/configuracoes");
       }
     } catch {

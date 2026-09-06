@@ -6,7 +6,9 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import Paginacao from "../components/Paginacao";
 import { SkeletonTabela } from "../components/Skeleton";
 import { formatarMoeda } from "../utils/format";
+import { mensagemErroRede } from "../utils/erros";
 import { apiFetch } from "../lib/api";
+import type { CatalogoItem } from "../types";
 
 // ============================================================
 // Página do Catálogo — peças e serviços com preço pronto
@@ -24,11 +26,17 @@ const TIPOS = [
   { valor: "servico", rotulo: "Serviços" },
 ];
 
-function criarFormVazio() {
+interface FormCatalogo {
+  descricao: string;
+  tipo: string;
+  valor_unitario: string | number;
+}
+
+function criarFormVazio(): FormCatalogo {
   return { descricao: "", tipo: "peca", valor_unitario: "" };
 }
 
-async function lerJsonSeguro(resp) {
+async function lerJsonSeguro(resp: Response): Promise<any> {
   try {
     return await resp.json();
   } catch {
@@ -37,15 +45,15 @@ async function lerJsonSeguro(resp) {
 }
 
 export default function Catalogo() {
-  const [itens, setItens] = useState([]);
+  const [itens, setItens] = useState<CatalogoItem[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
   const [modalAberto, setModalAberto] = useState(false);
-  const [editandoId, setEditandoId] = useState(null);
-  const [form, setForm] = useState(criarFormVazio);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormCatalogo>(criarFormVazio);
   const [erroForm, setErroForm] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -53,7 +61,7 @@ export default function Catalogo() {
   const [buscaDebounced, setBuscaDebounced] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("todos");
   const [pagina, setPagina] = useState(1);
-  const [idParaExcluir, setIdParaExcluir] = useState(null);
+  const [idParaExcluir, setIdParaExcluir] = useState<string | null>(null);
   const [excluindo, setExcluindo] = useState(false);
 
   useEffect(() => {
@@ -78,7 +86,7 @@ export default function Catalogo() {
   const inicio = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
   const fim = Math.min(pagina * POR_PAGINA, total);
 
-  async function carregar(sinal) {
+  async function carregar(sinal?: AbortSignal) {
     try {
       setCarregando(true);
       const params = new URLSearchParams({
@@ -103,8 +111,9 @@ export default function Catalogo() {
       }
       setErro("");
     } catch (e) {
-      if (e?.name === "AbortError" || sinal?.aborted) return;
-      setErro(e.message || "Não foi possível carregar o catálogo.");
+      if (sinal?.aborted) return;
+      const msg = mensagemErroRede(e, "Não foi possível carregar o catálogo.");
+      if (msg !== null) setErro(msg);
     } finally {
       if (!sinal?.aborted) setCarregando(false);
     }
@@ -117,7 +126,7 @@ export default function Catalogo() {
     setModalAberto(true);
   }
 
-  function abrirEdicao(item) {
+  function abrirEdicao(item: CatalogoItem) {
     setForm({
       descricao: item.descricao || "",
       tipo: item.tipo || "peca",
@@ -132,12 +141,18 @@ export default function Catalogo() {
     setModalAberto(false);
   }
 
-  function aoMudar(campo, valor) {
-    setForm((atual) => ({ ...atual, [campo]: valor }));
+  function aoMudar(campo: string, valor: string) {
+    if (campo === "descricao") {
+      setForm((atual) => ({ ...atual, descricao: valor }));
+    } else if (campo === "tipo") {
+      setForm((atual) => ({ ...atual, tipo: valor }));
+    } else if (campo === "valor_unitario") {
+      setForm((atual) => ({ ...atual, valor_unitario: valor }));
+    }
   }
 
-  async function salvar(evento) {
-    evento.preventDefault();
+  async function salvar(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     const url = editandoId ? `${API}/${editandoId}` : API;
     const metodo = editandoId ? "PUT" : "POST";
     try {
@@ -179,7 +194,8 @@ export default function Catalogo() {
       if (itens.length === 1 && pagina > 1) setPagina(pagina - 1);
       else await carregar();
     } catch (e) {
-      toast.error(e.message || "Não foi possível excluir.");
+      const msg = mensagemErroRede(e, "Não foi possível excluir.");
+      if (msg !== null) toast.error(msg);
     } finally {
       setExcluindo(false);
     }

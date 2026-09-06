@@ -9,8 +9,10 @@ import {
   Loader2,
   Info,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { mascararTelefone, mascararCnpj } from "../utils/mascaras";
+import { mensagemErroRede } from "../utils/erros";
 import { apiFetch } from "../lib/api";
 
 // ============================================================
@@ -20,7 +22,7 @@ import { apiFetch } from "../lib/api";
 // no cabeçalho e na assinatura automática.
 // ============================================================
 
-async function lerJsonSeguro(resp) {
+async function lerJsonSeguro(resp: Response): Promise<any> {
   try {
     return await resp.json();
   } catch {
@@ -28,12 +30,29 @@ async function lerJsonSeguro(resp) {
   }
 }
 
-function formVazio() {
+interface FormLoja {
+  nome_loja: string;
+  telefone: string;
+  email: string;
+  endereco: string;
+  cnpj: string;
+}
+
+function formVazio(): FormLoja {
   return { nome_loja: "", telefone: "", email: "", endereco: "", cnpj: "" };
 }
 
+interface CampoLoja {
+  nome: keyof FormLoja;
+  label: string;
+  tipo: string;
+  placeholder?: string;
+  icone: LucideIcon;
+  maxLength?: number;
+}
+
 export default function Configuracoes() {
-  const [form, setForm] = useState(formVazio);
+  const [form, setForm] = useState<FormLoja>(formVazio);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -55,8 +74,9 @@ export default function Configuracoes() {
           cnpj: dados.cnpj || "",
         });
       } catch (e) {
-        if (e?.name === "AbortError" || controle.signal.aborted) return;
-        setErro(e.message || "Não foi possível carregar.");
+        if (controle.signal.aborted) return;
+        const msg = mensagemErroRede(e, "Não foi possível carregar.");
+        if (msg !== null) setErro(msg);
       } finally {
         if (!controle.signal.aborted) setCarregando(false);
       }
@@ -64,14 +84,21 @@ export default function Configuracoes() {
     return () => controle.abort();
   }, []);
 
-  function aoMudar(campo, valor) {
-    let final = valor;
-    if (campo === "telefone") final = mascararTelefone(valor);
-    if (campo === "cnpj") final = mascararCnpj(valor);
-    setForm((atual) => ({ ...atual, [campo]: final }));
+  function aoMudar(campo: keyof FormLoja, valor: string) {
+    if (campo === "telefone") {
+      setForm((atual) => ({ ...atual, telefone: mascararTelefone(valor) }));
+    } else if (campo === "cnpj") {
+      setForm((atual) => ({ ...atual, cnpj: mascararCnpj(valor) }));
+    } else if (campo === "nome_loja") {
+      setForm((atual) => ({ ...atual, nome_loja: valor }));
+    } else if (campo === "email") {
+      setForm((atual) => ({ ...atual, email: valor }));
+    } else {
+      setForm((atual) => ({ ...atual, endereco: valor }));
+    }
   }
 
-  async function salvar(e) {
+  async function salvar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (form.nome_loja.trim().length < 2) {
       setErro("Digite o nome da oficina (mínimo 2 letras).");
@@ -104,7 +131,7 @@ export default function Configuracoes() {
     }
   }
 
-  const campos = [
+  const campos: CampoLoja[] = [
     {
       nome: "nome_loja",
       label: "Nome da oficina *",
