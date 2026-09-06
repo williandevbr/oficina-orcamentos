@@ -1,7 +1,7 @@
 import pdfmake from "pdfmake";
 import { fileURLToPath } from "url";
 import path from "path";
-import { calcularTotais } from "./calculo.js";
+import { calcularTotais, totalLinha } from "./calculo.js";
 
 // ============================================================
 // Geração do PDF de ORÇAMENTO (layout profissional)
@@ -52,23 +52,54 @@ const rotuloStatus = {
   expirado: "Expirado",
 };
 
+// Cor do selo de status (fundo) — o cliente olha primeiro para isso
+const corStatus = {
+  rascunho: "#64748b",
+  enviado: "#2563eb",
+  aprovado: "#16a34a",
+  recusado: "#dc2626",
+  expirado: "#d97706",
+};
+
 // "Molde" do documento: recebe o orçamento completo (com cliente e itens)
 export async function gerarPdfOrcamento(orcamento) {
   const cliente = orcamento.clientes || {};
   const itens = orcamento.orcamento_itens || [];
-  const numero = String(orcamento.numero).padStart(4, "0");
+  const numero = String(orcamento.numero ?? "—").padStart(4, "0");
   const dataEmissao = new Date(
     orcamento.created_at || Date.now(),
   ).toLocaleDateString("pt-BR");
 
+  // Validade com data pronta (o cliente não precisa calcular)
+  const validadeDias = Number(orcamento.validade_dias) || 7;
+  const validoAte = new Date(orcamento.created_at || Date.now());
+  validoAte.setDate(validoAte.getDate() + validadeDias);
+  const validoAteTxt = Number.isNaN(validoAte.getTime())
+    ? "—"
+    : validoAte.toLocaleDateString("pt-BR");
+
+  // Protocolo curto do aceite digital (identifica este orçamento)
+  const protocolo = String(orcamento.id || "")
+    .replace(/-/g, "")
+    .slice(0, 8)
+    .toUpperCase();
+
+  // Totais de linha recalculados (iguais aos do resumo — nunca divergem)
+  const itensCalc = itens.map((item) => ({
+    ...item,
+    total: totalLinha(item.quantidade, item.valor_unitario),
+  }));
+
   // Recalcula os totais com a mesma regra do sistema (fonte única)
   const { subtotal, desconto, total } = calcularTotais(
-    itens.map((item) => ({
+    itensCalc.map((item) => ({
       quantidade: item.quantidade,
       valor_unitario: item.valor_unitario,
     })),
     orcamento.desconto,
   );
+
+  const corSelo = corStatus[orcamento.status] || "#64748b";
 
   const estiloTabela = {
     // Cabeçalho da tabela de itens (letra branca sobre azul)
@@ -129,10 +160,32 @@ export async function gerarPdfOrcamento(orcamento) {
                 alignment: "right",
               },
               {
-                text: `Status: ${rotuloStatus[orcamento.status] || orcamento.status}`,
-                fontSize: 8,
-                color: "#64748b",
+                // Selo colorido de status (destaque do documento)
+                table: {
+                  widths: ["auto"],
+                  body: [
+                    [
+                      {
+                        text: (rotuloStatus[orcamento.status] || orcamento.status || "").toUpperCase(),
+                        fontSize: 8,
+                        bold: true,
+                        color: "#ffffff",
+                        alignment: "center",
+                      },
+                    ],
+                  ],
+                },
+                layout: {
+                  fillColor: () => corSelo,
+                  hLineColor: () => corSelo,
+                  vLineColor: () => corSelo,
+                  paddingTop: () => 3,
+                  paddingBottom: () => 3,
+                  paddingLeft: () => 10,
+                  paddingRight: () => 10,
+                },
                 alignment: "right",
+                margin: [0, 5, 0, 0],
               },
             ],
           },
@@ -211,7 +264,7 @@ export async function gerarPdfOrcamento(orcamento) {
               },
               { text: "Total", style: "cabecalhoTabela", alignment: "right" },
             ],
-            ...itens.map((item) => [
+            ...itensCalc.map((item) => [
               { text: String(Number(item.quantidade)), alignment: "center" },
               { text: item.descricao },
               { text: item.tipo === "peca" ? "Peça" : "Serviço" },
@@ -284,9 +337,9 @@ export async function gerarPdfOrcamento(orcamento) {
         ],
       },
 
-      // ===== Validade =====
+      // ===== Validade (com data pronta) =====
       {
-        text: `Este orçamento tem validade de ${orcamento.validade_dias || 7} dias a partir da data de emissão.`,
+        text: `Válido até ${validoAteTxt} (${validadeDias} dias a partir da emissão).`,
         fontSize: 8,
         color: "#64748b",
         margin: [0, 18, 0, 0],
@@ -314,6 +367,56 @@ export async function gerarPdfOrcamento(orcamento) {
         fontSize: 9,
         color: "#94a3b8",
         margin: [0, 24, 0, 0],
+      },
+
+      // ===== Aceite digital (prova de envio/aprovação) =====
+      {
+        text: "ACEITE DIGITAL",
+        fontSize: 8,
+        bold: true,
+        color: "#2563eb",
+        letterSpacing: 1,
+        margin: [0, 18, 0, 4],
+      },
+      {
+        text:
+          orcamento.status === "aprovado"
+            ? `Aprovado por ${cliente.nome || "cliente"} • Protocolo ${protocolo || "—"}. Guarde este PDF como comprovante.`
+            : `Para aprovar, responda este PDF no WhatsApp da oficina (${oficina.telefone || "ver telefone acima"}) informando o protocolo ${protocolo || "—"}.`,
+        fontSize: 8,
+        color: "#334155",
+      },
+
+      // ===== Assinaturas (vale impresso ou foto do assinado) =====
+      {
+        columns: [
+          {
+            stack: [
+              { text: "", margin: [0, 18, 0, 0] },
+              {
+                canvas: [
+                  { type: "line", x1: 0, y1: 0, x2: 230, y2: 0, lineWidth: 1, lineColor: "#94a3b8" },
+                ],
+              },
+              { text: "Assinatura do cliente", fontSize: 7, color: "#64748b", alignment: "center", margin: [0, 3, 0, 0] },
+              { text: cliente.nome || "", fontSize: 8, alignment: "center" },
+            ],
+          },
+          {
+            stack: [
+              { text: "", margin: [0, 18, 0, 0] },
+              {
+                canvas: [
+                  { type: "line", x1: 0, y1: 0, x2: 230, y2: 0, lineWidth: 1, lineColor: "#94a3b8" },
+                ],
+              },
+              { text: "Assinatura da oficina", fontSize: 7, color: "#64748b", alignment: "center", margin: [0, 3, 0, 0] },
+              { text: oficina.nome, fontSize: 8, alignment: "center" },
+            ],
+          },
+        ],
+        columnGap: 40,
+        margin: [0, 6, 0, 0],
       },
     ],
 
