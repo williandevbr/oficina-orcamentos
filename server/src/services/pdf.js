@@ -105,6 +105,14 @@ export async function gerarPdfOrcamento(orcamento) {
   const pecas = itensCalc.filter((i) => i.tipo === "peca");
   const servicos = itensCalc.filter((i) => i.tipo !== "peca");
 
+  // Subtotais por grupo (como nos modelos profissionais)
+  const subtotalPecas = Math.round(
+    pecas.reduce((s, i) => s + i.total, 0) * 100,
+  ) / 100;
+  const subtotalServicos = Math.round(
+    servicos.reduce((s, i) => s + i.total, 0) * 100,
+  ) / 100;
+
   const linhasTabela = (lista) =>
     lista.map((item) => [
       { text: String(Number(item.quantidade)), alignment: "center" },
@@ -335,6 +343,22 @@ export async function gerarPdfOrcamento(orcamento) {
             table: {
               widths: ["50%", "50%"],
               body: [
+                [
+                  { text: "Peças", color: "#64748b", padding: [0, 3] },
+                  {
+                    text: formatarMoeda(subtotalPecas),
+                    alignment: "right",
+                    padding: [0, 3],
+                  },
+                ],
+                [
+                  { text: "Mão de obra", color: "#64748b", padding: [0, 3] },
+                  {
+                    text: formatarMoeda(subtotalServicos),
+                    alignment: "right",
+                    padding: [0, 3],
+                  },
+                ],
                 [
                   { text: "Subtotal", color: "#64748b", padding: [0, 3] },
                   {
