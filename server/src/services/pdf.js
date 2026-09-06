@@ -101,6 +101,55 @@ export async function gerarPdfOrcamento(orcamento) {
 
   const corSelo = corStatus[orcamento.status] || "#64748b";
 
+  // Peça e mão de obra em tabelas separadas (padrão que vende)
+  const pecas = itensCalc.filter((i) => i.tipo === "peca");
+  const servicos = itensCalc.filter((i) => i.tipo !== "peca");
+
+  const linhasTabela = (lista) =>
+    lista.map((item) => [
+      { text: String(Number(item.quantidade)), alignment: "center" },
+      { text: item.descricao },
+      { text: formatarMoeda(item.valor_unitario), alignment: "right" },
+      { text: formatarMoeda(item.total), alignment: "right", bold: true },
+    ]);
+
+  const tabelaItens = (titulo, lista) => [
+    {
+      text: titulo,
+      fontSize: 9,
+      bold: true,
+      color: "#1e3a8a",
+      margin: [0, 16, 0, 6],
+    },
+    {
+      table: {
+        headerRows: 1,
+        widths: ["10%", "*", "22%", "22%"],
+        body: [
+          [
+            { text: "Qtd", style: "cabecalhoTabela", alignment: "center" },
+            { text: "Descrição", style: "cabecalhoTabela" },
+            {
+              text: "Valor unitário",
+              style: "cabecalhoTabela",
+              alignment: "right",
+            },
+            { text: "Total", style: "cabecalhoTabela", alignment: "right" },
+          ],
+          ...linhasTabela(lista),
+        ],
+      },
+      layout: {
+        fillColor: (rowIndex) =>
+          rowIndex === 0 ? "#1e3a8a" : rowIndex % 2 === 0 ? "#f1f5f9" : null,
+        hLineColor: () => "#cbd5e1",
+        vLineColor: () => "#cbd5e1",
+        paddingTop: () => 5,
+        paddingBottom: () => 5,
+      },
+    },
+  ];
+
   const estiloTabela = {
     // Cabeçalho da tabela de itens (letra branca sobre azul)
     cabecalhoTabela: { color: "#ffffff", bold: true, fontSize: 8 },
@@ -116,51 +165,76 @@ export async function gerarPdfOrcamento(orcamento) {
       color: "#0f172a",
     },
     content: [
-      // ===== Cabeçalho do documento =====
+      // ===== Faixa superior da oficina =====
       {
-        columns: [
-          {
-            stack: [
+        table: {
+          widths: ["*", "auto"],
+          body: [
+            [
               {
-                text: oficina.nome,
-                bold: true,
-                fontSize: 20,
-                color: "#1e3a8a",
+                stack: [
+                  { text: oficina.nome, bold: true, fontSize: 20, color: "#ffffff" },
+                  ...(oficina.endereco
+                    ? [{ text: oficina.endereco, fontSize: 8, color: "#bfdbfe" }]
+                    : []),
+                  ...(oficina.telefone
+                    ? [{ text: oficina.telefone, fontSize: 8, color: "#bfdbfe" }]
+                    : []),
+                  ...(oficina.cnpj
+                    ? [{ text: `CNPJ: ${oficina.cnpj}`, fontSize: 8, color: "#bfdbfe" }]
+                    : []),
+                ],
               },
               {
-                text: "Orçamentos para oficinas",
-                fontSize: 9,
-                color: "#64748b",
-                margin: [0, 2, 0, 0],
+                stack: [
+                  {
+                    text: "ORÇAMENTO",
+                    bold: true,
+                    fontSize: 20,
+                    color: "#ffffff",
+                    alignment: "right",
+                  },
+                  {
+                    text: `Nº ${numero}`,
+                    fontSize: 12,
+                    bold: true,
+                    color: "#bfdbfe",
+                    alignment: "right",
+                    margin: [0, 2, 0, 0],
+                  },
+                ],
               },
-              ...(oficina.telefone
-                ? [{ text: oficina.telefone, fontSize: 8, color: "#64748b" }]
-                : []),
             ],
-          },
-          {
-            stack: [
+          ],
+        },
+        layout: {
+          fillColor: () => "#1e3a8a",
+          hLineColor: () => "#1e3a8a",
+          vLineColor: () => "#1e3a8a",
+          paddingTop: () => 12,
+          paddingBottom: () => 12,
+          paddingLeft: () => 14,
+          paddingRight: () => 14,
+        },
+        margin: [0, 0, 0, 0],
+      },
+
+      // ===== Faixa de datas + status =====
+      {
+        table: {
+          widths: ["*", "*", "*", "auto"],
+          body: [
+            [
+              { text: "Emissão", color: "#64748b", fontSize: 7 },
+              { text: "Válido até", color: "#64748b", fontSize: 7 },
+              { text: "Protocolo", color: "#64748b", fontSize: 7 },
+              { text: "Status", color: "#64748b", fontSize: 7, alignment: "center" },
+            ],
+            [
+              { text: dataEmissao, bold: true, fontSize: 9 },
+              { text: validoAteTxt, bold: true, fontSize: 9 },
+              { text: protocolo || "—", bold: true, fontSize: 9 },
               {
-                text: "ORÇAMENTO",
-                bold: true,
-                fontSize: 18,
-                color: "#2563eb",
-                alignment: "right",
-              },
-              {
-                text: `Número: ${numero}`,
-                fontSize: 10,
-                alignment: "right",
-                margin: [0, 3, 0, 0],
-              },
-              {
-                text: `Emissão: ${dataEmissao}`,
-                fontSize: 8,
-                color: "#64748b",
-                alignment: "right",
-              },
-              {
-                // Selo colorido de status (destaque do documento)
                 table: {
                   widths: ["auto"],
                   body: [
@@ -184,118 +258,82 @@ export async function gerarPdfOrcamento(orcamento) {
                   paddingLeft: () => 10,
                   paddingRight: () => 10,
                 },
-                alignment: "right",
-                margin: [0, 5, 0, 0],
+                alignment: "center",
               },
-            ],
-          },
-        ],
-        columnGap: 20,
-      },
-
-      // Linha divisória azul
-      {
-        canvas: [
-          {
-            type: "line",
-            x1: 0,
-            y1: 0,
-            x2: 523,
-            y2: 0,
-            lineWidth: 2,
-            lineColor: "#2563eb",
-          },
-        ],
-        margin: [0, 10, 0, 14],
-      },
-
-      // ===== Dados do cliente =====
-      {
-        text: "DADOS DO CLIENTE",
-        fontSize: 8,
-        bold: true,
-        color: "#2563eb",
-        letterSpacing: 1,
-        margin: [0, 0, 0, 6],
-      },
-      {
-        table: {
-          widths: ["30%", "25%", "25%", "20%"],
-          body: [
-            [
-              { text: "Cliente", color: "#64748b", fontSize: 7 },
-              { text: "Telefone", color: "#64748b", fontSize: 7 },
-              { text: "Veículo", color: "#64748b", fontSize: 7 },
-              { text: "Placa", color: "#64748b", fontSize: 7 },
-            ],
-            [
-              { text: cliente.nome || "—", bold: true },
-              { text: cliente.telefone || "—" },
-              { text: cliente.veiculo || "—" },
-              { text: cliente.placa || "—" },
             ],
           ],
         },
         layout: "lightHorizontalLines",
+        margin: [0, 10, 0, 4],
       },
 
-      // ===== Itens do orçamento =====
-      {
-        text: "ITENS DO ORÇAMENTO",
-        fontSize: 8,
-        bold: true,
-        color: "#2563eb",
-        letterSpacing: 1,
-        margin: [0, 18, 0, 6],
-      },
+      // ===== Cartão do cliente + veículo =====
       {
         table: {
-          headerRows: 1,
-          widths: ["8%", "*", "14%", "18%", "18%"],
+          widths: ["*", "*", "*", "*"],
           body: [
             [
-              { text: "Qtd", style: "cabecalhoTabela", alignment: "center" },
-              { text: "Descrição", style: "cabecalhoTabela" },
-              { text: "Tipo", style: "cabecalhoTabela" },
-              {
-                text: "Valor unitário",
-                style: "cabecalhoTabela",
-                alignment: "right",
-              },
-              { text: "Total", style: "cabecalhoTabela", alignment: "right" },
+              { text: "CLIENTE", color: "#64748b", fontSize: 7, bold: true },
+              { text: "TELEFONE", color: "#64748b", fontSize: 7, bold: true },
+              { text: "VEÍCULO", color: "#64748b", fontSize: 7, bold: true },
+              { text: "PLACA", color: "#64748b", fontSize: 7, bold: true },
             ],
-            ...itensCalc.map((item) => [
-              { text: String(Number(item.quantidade)), alignment: "center" },
-              { text: item.descricao },
-              { text: item.tipo === "peca" ? "Peça" : "Serviço" },
-              { text: formatarMoeda(item.valor_unitario), alignment: "right" },
-              {
-                text: formatarMoeda(item.total),
-                alignment: "right",
-                bold: true,
-              },
-            ]),
+            [
+              { text: cliente.nome || "—", bold: true, fontSize: 10 },
+              { text: cliente.telefone || "—", fontSize: 10 },
+              { text: cliente.veiculo || "—", fontSize: 10 },
+              { text: cliente.placa || "—", fontSize: 10, bold: true },
+            ],
           ],
         },
         layout: {
-          fillColor: (rowIndex, node) =>
-            rowIndex === 0 ? "#2563eb" : rowIndex % 2 === 0 ? "#f8fafc" : null,
+          fillColor: () => "#f1f5f9",
           hLineColor: () => "#e2e8f0",
           vLineColor: () => "#e2e8f0",
-          paddingTop: () => 5,
-          paddingBottom: () => 5,
+          paddingTop: () => 6,
+          paddingBottom: () => 6,
+          paddingLeft: () => 10,
+          paddingRight: () => 10,
         },
+        margin: [0, 8, 0, 0],
       },
 
-      // ===== Resumo dos valores =====
+      // ===== Peças e serviços (tabelas separadas) =====
+      ...(pecas.length ? tabelaItens("PEÇAS", pecas) : []),
+      ...(servicos.length ? tabelaItens("MÃO DE OBRA (SERVIÇOS)", servicos) : []),
+
+      // ===== Totais + condições lado a lado =====
       {
         columns: [
-          { width: "*", text: "" },
           {
-            width: "45%",
+            width: "50%",
+            margin: [0, 14, 10, 0],
+            stack: [
+              {
+                text: "CONDIÇÕES",
+                fontSize: 8,
+                bold: true,
+                color: "#1e3a8a",
+                margin: [0, 0, 0, 4],
+              },
+              {
+                text: `Validade: até ${validoAteTxt} (${validadeDias} dias).`,
+                fontSize: 8,
+                color: "#334155",
+                margin: [0, 0, 0, 2],
+              },
+              {
+                text: "Garantia: 90 dias para serviços e peças aplicadas.",
+                fontSize: 8,
+                color: "#334155",
+              },
+            ],
+          },
+          {
+            width: "50%",
             margin: [0, 14, 0, 0],
             table: {
-              widths: ["55%", "45%"],
+              widths: ["50%", "50%"],
               body: [
                 [
                   { text: "Subtotal", color: "#64748b", padding: [0, 3] },
@@ -317,32 +355,28 @@ export async function gerarPdfOrcamento(orcamento) {
                   {
                     text: "TOTAL",
                     bold: true,
-                    color: "#1e3a8a",
+                    color: "#ffffff",
                     fontSize: 12,
-                    padding: [0, 6],
+                    padding: [6, 6],
                   },
                   {
                     text: formatarMoeda(total),
                     bold: true,
-                    color: "#1e3a8a",
+                    color: "#ffffff",
                     fontSize: 15,
                     alignment: "right",
-                    padding: [0, 6],
+                    padding: [6, 6],
                   },
                 ],
               ],
             },
-            layout: "noBorders",
+            layout: {
+              fillColor: (rowIndex) => (rowIndex === 2 ? "#1e3a8a" : null),
+              hLineColor: () => "#e2e8f0",
+              vLineColor: () => "#e2e8f0",
+            },
           },
         ],
-      },
-
-      // ===== Validade (com data pronta) =====
-      {
-        text: `Válido até ${validoAteTxt} (${validadeDias} dias a partir da emissão).`,
-        fontSize: 8,
-        color: "#64748b",
-        margin: [0, 18, 0, 0],
       },
 
       // ===== Observações (se houver) =====
@@ -352,13 +386,26 @@ export async function gerarPdfOrcamento(orcamento) {
               text: "OBSERVAÇÕES",
               fontSize: 8,
               bold: true,
-              color: "#2563eb",
-              letterSpacing: 1,
-              margin: [0, 12, 0, 4],
+              color: "#1e3a8a",
+              margin: [0, 14, 0, 4],
             },
             { text: orcamento.observacoes, fontSize: 9, color: "#334155" },
           ]
         : []),
+
+      // ===== Declaração de aceite =====
+      {
+        text: "DECLARAÇÃO",
+        fontSize: 8,
+        bold: true,
+        color: "#1e3a8a",
+        margin: [0, 14, 0, 4],
+      },
+      {
+        text: "Aprovo a execução dos serviços e a aplicação das peças descritas neste orçamento, no valor total acima.",
+        fontSize: 8,
+        color: "#334155",
+      },
 
       // ===== Mensagem final =====
       {
@@ -366,7 +413,7 @@ export async function gerarPdfOrcamento(orcamento) {
         alignment: "center",
         fontSize: 9,
         color: "#94a3b8",
-        margin: [0, 24, 0, 0],
+        margin: [0, 20, 0, 0],
       },
 
       // ===== Aceite digital (prova de envio/aprovação) =====
@@ -374,9 +421,8 @@ export async function gerarPdfOrcamento(orcamento) {
         text: "ACEITE DIGITAL",
         fontSize: 8,
         bold: true,
-        color: "#2563eb",
-        letterSpacing: 1,
-        margin: [0, 18, 0, 4],
+        color: "#1e3a8a",
+        margin: [0, 16, 0, 4],
       },
       {
         text:
