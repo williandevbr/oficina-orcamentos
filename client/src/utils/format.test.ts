@@ -2,7 +2,7 @@
 // Testes unitários das funções de formatação do frontend
 // ============================================================
 import { describe, it, expect } from "vitest";
-import { formatarMoeda, formatarData, formatarNumero } from "./format.js";
+import { formatarMoeda, formatarData, formatarNumero } from "./format";
 
 describe("formatarMoeda", () => {
   it("formata número como Real brasileiro", () => {

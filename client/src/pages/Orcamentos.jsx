@@ -16,12 +16,12 @@ import OrcamentoForm from "../components/OrcamentoForm.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import Paginacao from "../components/Paginacao.jsx";
 import { SkeletonTabela } from "../components/Skeleton.jsx";
-import { formatarMoeda, formatarData, formatarNumero } from "../utils/format.js";
+import { formatarMoeda, formatarData, formatarNumero } from "../utils/format";
 import {
   montarLinkWhatsApp,
   calcularValidoAte,
-} from "../utils/mascaras.js";
-import { apiFetch } from "../lib/api.js";
+} from "../utils/mascaras";
+import { apiFetch } from "../lib/api";
 
 // ============================================================
 // Página de ORÇAMENTOS

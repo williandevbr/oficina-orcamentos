@@ -20,7 +20,7 @@ import Catalogo from "./pages/Catalogo.jsx";
 import Perfil from "./pages/Perfil.jsx";
 import Configuracoes from "./pages/Configuracoes.jsx";
 import NotFound from "./pages/NotFound.jsx";
-import { apiFetch } from "./lib/api.js";
+import { apiFetch } from "./lib/api";
 
 // Estrutura das páginas internas (menu lateral + conteúdo).
 // No celular o menu vira drawer; no desktop ele recolhe/expande

@@ -10,8 +10,8 @@ import {
   Info,
 } from "lucide-react";
 import { toast } from "sonner";
-import { mascararTelefone, mascararCnpj } from "../utils/mascaras.js";
-import { apiFetch } from "../lib/api.js";
+import { mascararTelefone, mascararCnpj } from "../utils/mascaras";
+import { apiFetch } from "../lib/api";
 
 // ============================================================
 // Página de CONFIGURAÇÕES (dados da oficina)

@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    // Alvo moderno (o Vite converte para o navegador sozinho)
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+
+    // Segurança de tipos (o melhor do TypeScript)
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // Compatível com o Vite (sem arquivos extras, sem enrolação)
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true
+  },
+  // Por enquanto o tsc só confere .ts/.tsx (a migração é aos poucos)
+  "include": ["src", "vite.config.ts"]
+}
