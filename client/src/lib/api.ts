@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js";
+import { supabase } from "./supabase";
 
 // ============================================================
 // Chamadas ao nosso servidor (com crachá automático)
@@ -17,14 +17,23 @@ const base = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 // DELETE) nunca repete sozinha para não duplicar dados.
 const TIMEOUT_MS = 30000;
 
-function ehTimeout(erro) {
+interface ErroRede {
+  name?: string;
+  _canceladoPeloUsuario?: boolean;
+}
+
+function ehTimeout(erro: unknown): boolean {
+  const e = erro as ErroRede | null | undefined;
   return (
-    erro?.name === "TimeoutError" ||
-    (erro?.name === "AbortError" && !erro?._canceladoPeloUsuario)
+    e?.name === "TimeoutError" ||
+    (e?.name === "AbortError" && !e?._canceladoPeloUsuario)
   );
 }
 
-export async function apiFetch(url, opcoes = {}) {
+export async function apiFetch(
+  url: string,
+  opcoes: RequestInit = {},
+): Promise<Response> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
 
@@ -36,7 +45,7 @@ export async function apiFetch(url, opcoes = {}) {
   const metodo = (opcoes.method || "GET").toUpperCase();
   const sinalUsuario = opcoes.signal || null;
 
-  const tentar = () =>
+  const tentar = (): Promise<Response> =>
     fetch(`${base}${url}`, {
       ...opcoes,
       headers: cabecalhos,

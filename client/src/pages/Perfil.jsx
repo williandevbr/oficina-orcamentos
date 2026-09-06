@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Save, Loader2, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext.jsx";
-import { apiFetch } from "../lib/api.js";
+import { apiFetch } from "../lib/api";
 
 // ============================================================
 // Página de PERFIL (quem usa o sistema)

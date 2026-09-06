@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import StatsCard from "../components/StatsCard.jsx";
 import { SkeletonStats, Skeleton } from "../components/Skeleton.jsx";
-import { formatarMoeda, formatarData, formatarNumero } from "../utils/format.js";
-import { calcularValidoAte } from "../utils/mascaras.js";
-import { apiFetch } from "../lib/api.js";
+import { formatarMoeda, formatarData, formatarNumero } from "../utils/format";
+import { calcularValidoAte } from "../utils/mascaras";
+import { apiFetch } from "../lib/api";
 
 // ============================================================
 // Página inicial: resumo da oficina com números REAIS do servidor

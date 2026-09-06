@@ -8,7 +8,7 @@ import {
   normalizarTelefoneWhatsApp,
   montarLinkWhatsApp,
   calcularValidoAte,
-} from "./mascaras.js";
+} from "./mascaras";
 
 describe("mascararTelefone", () => {
   it("formata celular 11 dígitos", () => {
@@ -72,7 +72,8 @@ describe("calcularValidoAte", () => {
   it("soma validade_dias", () => {
     const base = "2026-01-10T12:00:00Z";
     const ate = calcularValidoAte(base, 7);
-    const diffDias = Math.round((ate - new Date(base)) / 86400000);
+    expect(ate).not.toBeNull();
+    const diffDias = Math.round((ate!.getTime() - new Date(base).getTime()) / 86400000);
     expect(diffDias).toBe(7);
   });
   it("retorna null para data invalida", () => {

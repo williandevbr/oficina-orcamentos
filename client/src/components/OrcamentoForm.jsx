@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
-import { formatarMoeda } from "../utils/format.js";
+import { formatarMoeda } from "../utils/format";
 
 // ============================================================
 // Formulário de ORÇAMENTO (modal)

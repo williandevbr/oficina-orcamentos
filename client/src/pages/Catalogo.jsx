@@ -5,8 +5,8 @@ import CatalogoForm from "../components/CatalogoForm.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import Paginacao from "../components/Paginacao.jsx";
 import { SkeletonTabela } from "../components/Skeleton.jsx";
-import { formatarMoeda } from "../utils/format.js";
-import { apiFetch } from "../lib/api.js";
+import { formatarMoeda } from "../utils/format";
+import { apiFetch } from "../lib/api";
 
 // ============================================================
 // Página do Catálogo — peças e serviços com preço pronto
