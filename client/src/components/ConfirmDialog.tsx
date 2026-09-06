@@ -11,10 +11,18 @@ export default function ConfirmDialog({
   cancelando = false,
   aoConfirmar,
   aoCancelar,
+}: {
+  aberto: boolean;
+  titulo?: string;
+  mensagem?: string;
+  confirmarLabel?: string;
+  cancelando?: boolean;
+  aoConfirmar: () => void;
+  aoCancelar?: () => void;
 }) {
   useEffect(() => {
     if (!aberto) return;
-    function aoTeclar(e) {
+    function aoTeclar(e: KeyboardEvent) {
       if (e.key === "Escape") aoCancelar?.();
     }
     window.addEventListener("keydown", aoTeclar);

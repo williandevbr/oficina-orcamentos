@@ -11,11 +11,12 @@ import {
   X,
   PanelLeftClose,
 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext.jsx";
+import type { LucideIcon } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 // Lista de itens do menu.
 // Cada item tem: o caminho (to), o texto (label) e um ícone.
-const links = [
+const links: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/catalogo", label: "Catálogo", icon: Package },
@@ -33,6 +34,11 @@ export default function Sidebar({
   aoFechar = () => {},
   recolhido = false,
   aoRecolher = () => {},
+}: {
+  aberto?: boolean;
+  aoFechar?: () => void;
+  recolhido?: boolean;
+  aoRecolher?: () => void;
 }) {
   const { usuario, sair } = useAuth();
 

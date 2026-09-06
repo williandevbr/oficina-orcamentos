@@ -11,7 +11,22 @@ import { X } from "lucide-react";
 //   aoFechar -> função chamada ao fechar
 // ============================================================
 
-const AUTOCOMPLETE = {
+export type ClienteFormValores = Record<string, string>;
+
+interface CampoCliente {
+  nome: string;
+  label: string;
+  tipo: string;
+  placeholder?: string;
+  inputMode?: "text" | "tel" | "email";
+  maxLength?: number;
+  maiuscula?: boolean;
+}
+
+const AUTOCOMPLETE: Record<
+  string,
+  "name" | "tel" | "email" | "street-address" | undefined
+> = {
   nome: "name",
   telefone: "tel",
   email: "email",
@@ -27,17 +42,25 @@ export default function ClienteForm({
   aoMudar,
   aoSalvar,
   aoFechar,
+}: {
+  form: ClienteFormValores;
+  editandoId: string | null;
+  erro?: string;
+  salvando?: boolean;
+  aoMudar: (campo: string, valor: string) => void;
+  aoSalvar: (e: React.FormEvent<HTMLFormElement>) => void;
+  aoFechar: () => void;
 }) {
   // Fecha com Escape (igual ao ConfirmDialog)
   useEffect(() => {
-    function aoTeclar(e) {
+    function aoTeclar(e: KeyboardEvent) {
       if (e.key === "Escape") aoFechar();
     }
     window.addEventListener("keydown", aoTeclar);
     return () => window.removeEventListener("keydown", aoTeclar);
   }, [aoFechar]);
   // Lista de campos do formulário (nome do campo, rótulo, tipo HTML)
-  const campos = [
+  const campos: CampoCliente[] = [
     { nome: "nome", label: "Nome completo *", tipo: "text" },
     {
       nome: "telefone",

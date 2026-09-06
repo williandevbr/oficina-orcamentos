@@ -2,11 +2,11 @@ import { Users, Plus, Pencil, Trash2, Search, X, Car } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import ClienteForm from "../components/ClienteForm.jsx";
-import VeiculosModal from "../components/VeiculosModal.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
-import Paginacao from "../components/Paginacao.jsx";
-import { SkeletonTabela } from "../components/Skeleton.jsx";
+import ClienteForm from "../components/ClienteForm";
+import VeiculosModal from "../components/VeiculosModal";
+import ConfirmDialog from "../components/ConfirmDialog";
+import Paginacao from "../components/Paginacao";
+import { SkeletonTabela } from "../components/Skeleton";
 import { mascararTelefone, mascararDocumento } from "../utils/mascaras";
 import { apiFetch } from "../lib/api";
 

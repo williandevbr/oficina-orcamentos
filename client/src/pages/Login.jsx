@@ -11,7 +11,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext.jsx";
+import { useAuth } from "../contexts/AuthContext";
 
 // ============================================================
 // Tela de LOGIN / CRIAR CONTA

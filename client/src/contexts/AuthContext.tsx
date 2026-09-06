@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode, } from "react";
+import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 
 // ============================================================
@@ -8,10 +10,22 @@ import { supabase } from "../lib/supabase";
 // Qualquer componente que queira saber o usuário usa useAuth().
 // ============================================================
 
-const AuthContext = createContext(null);
+interface AuthContexto {
+  usuario: User | null;
+  carregandoSessao: boolean;
+  entrar: (email: string, senha: string) => Promise<void>;
+  cadastrar: (
+    email: string,
+    senha: string,
+  ) => Promise<{ user: User | null; session: Session | null }>;
+  recuperarSenha: (email: string) => Promise<void>;
+  sair: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContexto | null>(null);
 
 // Transforma mensagens do Supabase em português amigável
-function traduzirErroAuth(mensagem) {
+function traduzirErroAuth(mensagem: string): string {
   if (/invalid login credentials/i.test(mensagem)) {
     return "E-mail ou senha incorretos.";
   }
@@ -30,8 +44,8 @@ function traduzirErroAuth(mensagem) {
   return mensagem || "Não foi possível continuar.";
 }
 
-export function AuthProvider({ children }) {
-  const [usuario, setUsuario] = useState(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [usuario, setUsuario] = useState<User | null>(null);
   const [carregandoSessao, setCarregandoSessao] = useState(true);
 
   // Ao abrir o site, verifica se já existe uma sessão salva
@@ -60,7 +74,7 @@ export function AuthProvider({ children }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  async function entrar(email, senha) {
+  async function entrar(email: string, senha: string): Promise<void> {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password: senha,
@@ -68,7 +82,10 @@ export function AuthProvider({ children }) {
     if (error) throw new Error(traduzirErroAuth(error.message));
   }
 
-  async function cadastrar(email, senha) {
+  async function cadastrar(
+    email: string,
+    senha: string,
+  ): Promise<{ user: User | null; session: Session | null }> {
     // O Supabase pode responder de duas formas:
     // 1) usuário já logado direto (confirmação de e-mail desligada)
     // 2) usuário criado, aguardando confirmar a conta pelo e-mail (session vem nula)
@@ -80,14 +97,14 @@ export function AuthProvider({ children }) {
     return data;
   }
 
-  async function recuperarSenha(email) {
+  async function recuperarSenha(email: string): Promise<void> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin,
     });
     if (error) throw new Error(traduzirErroAuth(error.message));
   }
 
-  async function sair() {
+  async function sair(): Promise<void> {
     await supabase.auth.signOut();
   }
 
@@ -107,7 +124,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContexto {
   const contexto = useContext(AuthContext);
   if (!contexto) {
     throw new Error("useAuth precisa estar dentro de <AuthProvider>.");

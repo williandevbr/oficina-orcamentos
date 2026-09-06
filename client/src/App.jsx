@@ -9,9 +9,9 @@ import {
 } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Toaster } from "sonner";
-import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
-import ExigirLogin from "./components/ExigirLogin.jsx";
-import Sidebar from "./components/Sidebar.jsx";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import ExigirLogin from "./components/ExigirLogin";
+import Sidebar from "./components/Sidebar";
 import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Clientes from "./pages/Clientes.jsx";

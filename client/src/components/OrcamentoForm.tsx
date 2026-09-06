@@ -1,19 +1,28 @@
 import { useEffect, useState } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { formatarMoeda } from "../utils/format";
+import type {
+  CatalogoItem,
+  Cliente,
+  Orcamento,
+  OrcamentoItem,
+  StatusOrcamento,
+  TipoItem,
+  Veiculo,
+} from "../types";
 
 // ============================================================
 // Formulário de ORÇAMENTO (modal)
 // ============================================================
 // Permite:
-//   - escolher o cliente
+//   - escolher o cliente (+ o veículo do atendimento)
 //   - adicionar/remover itens (serviços e peças)
 //   - ver o total calculado AO VIVO (subtotal - desconto)
 //   - escolher o status do orçamento
 // Ao salvar, chama onSalvar(payload) com tudo montado.
 // ============================================================
 
-const statusOpcoes = [
+const statusOpcoes: { valor: StatusOrcamento; rotulo: string }[] = [
   { valor: "rascunho", rotulo: "Rascunho" },
   { valor: "enviado", rotulo: "Enviado" },
   { valor: "aprovado", rotulo: "Aprovado" },
@@ -21,14 +30,43 @@ const statusOpcoes = [
   { valor: "expirado", rotulo: "Expirado" },
 ];
 
-const itemVazio = {
+// Linha do formulário (valores ainda como texto do <input>)
+interface ItemLinha {
+  descricao: string;
+  tipo: TipoItem;
+  quantidade: number | string;
+  valor_unitario: number | string;
+  _key: string;
+}
+
+interface FormOrcamento {
+  cliente_id: string;
+  veiculo_id: string;
+  status: StatusOrcamento;
+  desconto: number | string;
+  observacoes: string;
+  validade_dias: number | string;
+}
+
+type CampoForm =
+  | "cliente_id"
+  | "veiculo_id"
+  | "status"
+  | "desconto"
+  | "observacoes"
+  | "validade_dias";
+
+type CampoItem = "tipo" | "descricao" | "quantidade" | "valor_unitario";
+
+const itemVazio: ItemLinha = {
   descricao: "",
   tipo: "servico",
   quantidade: 1,
   valor_unitario: "",
+  _key: "",
 };
 
-function comChave(item) {
+function comChave(item: Partial<ItemLinha>): ItemLinha {
   return { ...itemVazio, ...item, _key: `${Date.now()}-${Math.random()}` };
 }
 
@@ -41,10 +79,27 @@ export default function OrcamentoForm({
   salvando = false,
   onSalvar,
   onFechar,
+}: {
+  clientes: Cliente[];
+  veiculos?: Veiculo[];
+  catalogo?: CatalogoItem[];
+  dadosIniciais?: Orcamento | null;
+  erro?: string;
+  salvando?: boolean;
+  onSalvar: (payload: {
+    cliente_id: string;
+    veiculo_id: string | null;
+    status: StatusOrcamento;
+    desconto: number;
+    observacoes: string;
+    validade_dias: number;
+    itens: OrcamentoItem[];
+  }) => void;
+  onFechar: () => void;
 }) {
   // Fecha com Escape
   useEffect(() => {
-    function aoTeclar(e) {
+    function aoTeclar(e: KeyboardEvent) {
       if (e.key === "Escape") onFechar();
     }
     window.addEventListener("keydown", aoTeclar);
@@ -52,17 +107,17 @@ export default function OrcamentoForm({
   }, [onFechar]);
 
   // Estado do formulário
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormOrcamento>({
     cliente_id: dadosIniciais?.cliente_id || "",
     veiculo_id: dadosIniciais?.veiculo_id || "",
     status: dadosIniciais?.status || "rascunho",
-    desconto: dadosIniciais?.desconto || 0,
+    desconto: dadosIniciais?.desconto ?? 0,
     observacoes: dadosIniciais?.observacoes || "",
     validade_dias: dadosIniciais?.validade_dias || 7,
   });
 
   // Estado dos itens (cada um com chave estável para o React)
-  const [itens, setItens] = useState(
+  const [itens, setItens] = useState<ItemLinha[]>(
     dadosIniciais?.orcamento_itens?.length
       ? dadosIniciais.orcamento_itens.map(comChave)
       : [comChave({})],
@@ -71,13 +126,21 @@ export default function OrcamentoForm({
   // Qual linha está mostrando sugestões do catálogo (-1 = nenhuma)
   const [sugestaoAberta, setSugestaoAberta] = useState(-1);
 
-  function aoMudar(campo, valor) {
-    // Trocou de cliente -> o veículo anterior não vale mais
+  function aoMudar(campo: CampoForm, valor: string) {
     if (campo === "cliente_id") {
+      // Trocou de cliente -> o veículo anterior não vale mais
       setForm({ ...form, cliente_id: valor, veiculo_id: "" });
-      return;
+    } else if (campo === "veiculo_id") {
+      setForm({ ...form, veiculo_id: valor });
+    } else if (campo === "status") {
+      setForm({ ...form, status: valor as StatusOrcamento });
+    } else if (campo === "desconto") {
+      setForm({ ...form, desconto: valor });
+    } else if (campo === "observacoes") {
+      setForm({ ...form, observacoes: valor });
+    } else {
+      setForm({ ...form, validade_dias: valor });
     }
-    setForm({ ...form, [campo]: valor });
   }
 
   // Veículos do cliente escolhido (moto, carro... o que ele tiver)
@@ -89,7 +152,7 @@ export default function OrcamentoForm({
     setItens([...itens, comChave({})]);
   }
 
-  function removerItem(indice) {
+  function removerItem(indice: number) {
     if (itens.length <= 1) {
       setErroLocal("O orçamento precisa de pelo menos um item.");
       return;
@@ -97,15 +160,20 @@ export default function OrcamentoForm({
     setItens(itens.filter((_, i) => i !== indice));
   }
 
-  function atualizarItem(indice, campo, valor) {
-    const novos = itens.map((item, i) =>
-      i === indice ? { ...item, [campo]: valor } : item,
+  function atualizarItem(indice: number, campo: CampoItem, valor: string) {
+    setItens((atual) =>
+      atual.map((item, i) => {
+        if (i !== indice) return item;
+        if (campo === "tipo") return { ...item, tipo: valor as TipoItem };
+        if (campo === "descricao") return { ...item, descricao: valor };
+        if (campo === "quantidade") return { ...item, quantidade: valor };
+        return { ...item, valor_unitario: valor };
+      }),
     );
-    setItens(novos);
   }
 
   // Sugestões do catálogo para a linha (até 5, pelo texto digitado)
-  function sugestoesPara(item) {
+  function sugestoesPara(item: ItemLinha): CatalogoItem[] {
     const termo = String(item.descricao || "").trim().toLowerCase();
     if (termo.length < 2 || catalogo.length === 0) return [];
     return catalogo
@@ -114,7 +182,7 @@ export default function OrcamentoForm({
   }
 
   // Puxa do catálogo: preenche descrição, tipo e preço sozinho
-  function puxarDoCatalogo(indice, entrada) {
+  function puxarDoCatalogo(indice: number, entrada: CatalogoItem) {
     setItens(
       itens.map((item, i) =>
         i === indice
@@ -140,7 +208,7 @@ export default function OrcamentoForm({
   const descontoNum = Math.max(0, Number(form.desconto) || 0);
   const total = Math.max(0, subtotal - descontoNum);
 
-  function aoSubmeter(e) {
+  function aoSubmeter(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErroLocal("");
     if (itens.length === 0) {

@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+
 // Card pequeno usado no Dashboard para mostrar números importantes.
 // Recebe: título, valor, um ícone e uma cor de destaque.
 export default function StatsCard({
@@ -5,6 +8,11 @@ export default function StatsCard({
   value,
   icon: Icon,
   color = "blue",
+}: {
+  title: string;
+  value: ReactNode;
+  icon: LucideIcon;
+  color?: "blue" | "green" | "orange" | "violet";
 }) {
   const colors = {
     blue: "bg-blue-100 text-blue-700",

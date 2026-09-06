@@ -1,5 +1,19 @@
 // Paginação simples e reutilizável (Clientes + Orçamentos).
-export default function Paginacao({ pagina, totalPaginas, total, inicio, fim, aoMudar }) {
+export default function Paginacao({
+  pagina,
+  totalPaginas,
+  total,
+  inicio,
+  fim,
+  aoMudar,
+}: {
+  pagina: number;
+  totalPaginas: number;
+  total: number;
+  inicio: number;
+  fim: number;
+  aoMudar: (pagina: number) => void;
+}) {
   if (total === 0) return null;
   return (
     <div className="flex flex-col items-center justify-between gap-2 border-t border-slate-100 px-5 py-3 text-sm text-slate-500 sm:flex-row">
