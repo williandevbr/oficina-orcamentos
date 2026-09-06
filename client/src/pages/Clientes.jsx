@@ -7,7 +7,7 @@ import VeiculosModal from "../components/VeiculosModal.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import Paginacao from "../components/Paginacao.jsx";
 import { SkeletonTabela } from "../components/Skeleton.jsx";
-import { mascararTelefone } from "../utils/mascaras.js";
+import { mascararTelefone, mascararDocumento } from "../utils/mascaras.js";
 import { apiFetch } from "../lib/api.js";
 
 // ============================================================
@@ -173,6 +173,7 @@ export default function Clientes() {
   function aoMudarForm(campo, valor) {
     let final = valor;
     if (campo === "telefone") final = mascararTelefone(valor);
+    if (campo === "documento") final = mascararDocumento(valor);
     setForm((atual) => ({ ...atual, [campo]: final }));
   }
 

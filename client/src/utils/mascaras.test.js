@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   mascararTelefone,
   mascararPlaca,
+  mascararCnpj,
+  mascararCpf,
+  mascararDocumento,
   normalizarTelefoneWhatsApp,
   montarLinkWhatsApp,
   calcularValidoAte,
@@ -25,6 +28,25 @@ describe("mascararPlaca", () => {
   });
   it("adiciona hífen no modelo antigo", () => {
     expect(mascararPlaca("abc1234")).toBe("ABC-1234");
+  });
+});
+
+describe("documentos (pontuação automática)", () => {
+  it("pontua CNPJ completo", () => {
+    expect(mascararCnpj("12345678000190")).toBe("12.345.678/0001-90");
+  });
+  it("pontua CNPJ parcial enquanto digita", () => {
+    expect(mascararCnpj("12345678")).toBe("12.345.678");
+  });
+  it("pontua CPF completo", () => {
+    expect(mascararCpf("12345678909")).toBe("123.456.789-09");
+  });
+  it("documento genérico escolhe sozinho", () => {
+    expect(mascararDocumento("12345678000190")).toBe("12.345.678/0001-90");
+    expect(mascararDocumento("12345678909")).toBe("123.456.789-09");
+  });
+  it("remove letras e limita tamanho", () => {
+    expect(mascararCnpj("ab12cd34567800019099")).toBe("12.345.678/0001-90");
   });
 });
 

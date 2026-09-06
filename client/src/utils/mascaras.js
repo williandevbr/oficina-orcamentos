@@ -1,4 +1,4 @@
-// Máscaras de telefone e placa (padrão brasileiro).
+// Máscaras de telefone, placa e documentos (padrão brasileiro).
 
 export function mascararTelefone(valor = "") {
   const digitos = String(valor).replace(/\D/g, "").slice(0, 11);
@@ -22,6 +22,43 @@ export function mascararPlaca(valor = "") {
     return `${placa.slice(0, 3)}-${placa.slice(3)}`;
   }
   return placa;
+}
+
+// Pontuação automática de CNPJ: 00.000.000/0001-00
+export function mascararCnpj(valor = "") {
+  const d = String(valor).replace(/\D/g, "").slice(0, 14);
+  let out = d;
+  if (d.length > 12) {
+    out = `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  } else if (d.length > 8) {
+    out = `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  } else if (d.length > 5) {
+    out = `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  } else if (d.length > 2) {
+    out = `${d.slice(0, 2)}.${d.slice(2)}`;
+  }
+  return out;
+}
+
+// Pontuação automática de CPF: 000.000.000-00
+export function mascararCpf(valor = "") {
+  const d = String(valor).replace(/\D/g, "").slice(0, 11);
+  let out = d;
+  if (d.length > 9) {
+    out = `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  } else if (d.length > 6) {
+    out = `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  } else if (d.length > 3) {
+    out = `${d.slice(0, 3)}.${d.slice(3)}`;
+  }
+  return out;
+}
+
+// Documento genérico (CPF/CNPJ): escolhe sozinho pelo tamanho
+export function mascararDocumento(valor = "") {
+  const d = String(valor).replace(/\D/g, "");
+  if (d.length > 11) return mascararCnpj(valor);
+  return mascararCpf(valor);
 }
 
 // Normaliza telefone para link wa.me (só dígitos + 55 se faltar DDI)

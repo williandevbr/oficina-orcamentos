@@ -46,6 +46,18 @@ function formatarMoeda(valor) {
   }).format(Number(valor) || 0);
 }
 
+// Pontuação automática de documento (só se veio sem pontos)
+function pontuarDocumento(valor = "") {
+  const d = String(valor).replace(/\D/g, "");
+  if (d.length === 14) {
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  }
+  if (d.length === 11) {
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  }
+  return String(valor);
+}
+
 // Dados da oficina vindos do .env (reserva, caso a loja não esteja cadastrada)
 const oficinaPadrao = {
   nome: process.env.OFICINA_NOME || "OrcaPro",
@@ -169,7 +181,7 @@ export async function gerarPdfOrcamento(orcamento, loja = null) {
     nome: l.nome_loja || oficinaPadrao.nome,
     telefone: l.telefone || oficinaPadrao.telefone,
     endereco: l.endereco || oficinaPadrao.endereco,
-    cnpj: l.cnpj || oficinaPadrao.cnpj,
+    cnpj: pontuarDocumento(l.cnpj || oficinaPadrao.cnpj),
   };
   const numero = String(orcamento.numero ?? "—").padStart(4, "0");
   const dataEmissao = new Date(

@@ -10,7 +10,7 @@ import {
   Info,
 } from "lucide-react";
 import { toast } from "sonner";
-import { mascararTelefone } from "../utils/mascaras.js";
+import { mascararTelefone, mascararCnpj } from "../utils/mascaras.js";
 import { apiFetch } from "../lib/api.js";
 
 // ============================================================
@@ -65,10 +65,10 @@ export default function Configuracoes() {
   }, []);
 
   function aoMudar(campo, valor) {
-    setForm((atual) => ({
-      ...atual,
-      [campo]: campo === "telefone" ? mascararTelefone(valor) : valor,
-    }));
+    let final = valor;
+    if (campo === "telefone") final = mascararTelefone(valor);
+    if (campo === "cnpj") final = mascararCnpj(valor);
+    setForm((atual) => ({ ...atual, [campo]: final }));
   }
 
   async function salvar(e) {
@@ -143,7 +143,7 @@ export default function Configuracoes() {
       tipo: "text",
       placeholder: "00.000.000/0001-00",
       icone: FileText,
-      maxLength: 20,
+      maxLength: 18,
     },
   ];
 
