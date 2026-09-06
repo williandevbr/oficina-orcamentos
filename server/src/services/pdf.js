@@ -46,7 +46,8 @@ function formatarMoeda(valor) {
   }).format(Number(valor) || 0);
 }
 
-const oficina = {
+// Dados da oficina vindos do .env (reserva, caso a loja não esteja cadastrada)
+const oficinaPadrao = {
   nome: process.env.OFICINA_NOME || "OrcaPro",
   telefone: process.env.OFICINA_TELEFONE || "",
   endereco: process.env.OFICINA_ENDERECO || "",
@@ -158,9 +159,18 @@ function gerarAssinatura(nomeProprietario) {
 // ============================================================
 // DOCUMENT DEFINITION
 // ============================================================
-export async function gerarPdfOrcamento(orcamento) {
+export async function gerarPdfOrcamento(orcamento, loja = null) {
   const cliente = orcamento.clientes || {};
   const itens = orcamento.orcamento_itens || [];
+
+  // Dados da oficina: usa a loja cadastrada; sem cadastro, usa o .env
+  const l = loja || {};
+  const oficina = {
+    nome: l.nome_loja || oficinaPadrao.nome,
+    telefone: l.telefone || oficinaPadrao.telefone,
+    endereco: l.endereco || oficinaPadrao.endereco,
+    cnpj: l.cnpj || oficinaPadrao.cnpj,
+  };
   const numero = String(orcamento.numero ?? "—").padStart(4, "0");
   const dataEmissao = new Date(
     orcamento.created_at || Date.now(),

@@ -55,6 +55,17 @@ describe("gerarPdfOrcamento", () => {
     expect(buffer.length).toBeGreaterThan(1000);
   });
 
+  it("usa os dados da loja no PDF quando informados", async () => {
+    const buffer = await gerarPdfOrcamento(orcamentoExemplo, {
+      nome_loja: "Auto Center Silva",
+      telefone: "(11) 3456-7890",
+      endereco: "Av. Paulista, 1000",
+      cnpj: "12.345.678/0001-90",
+    });
+    expect(buffer.length).toBeGreaterThan(1000);
+    expect(Buffer.from(buffer.slice(0, 5)).toString()).toBe("%PDF-");
+  });
+
   it("usa o veículo do orçamento quando informado", async () => {
     const buffer = await gerarPdfOrcamento({
       ...orcamentoExemplo,

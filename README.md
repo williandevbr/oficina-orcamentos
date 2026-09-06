@@ -14,6 +14,7 @@ O OrcaPro resolve o dia a dia de uma oficina mecânica:
 - **Gera um PDF bonito** com o nome da oficina, os itens e os totais, pronto para mandar ao cliente
 - **Controla o status** de cada orçamento (rascunho, enviado, aprovado, recusado)
 - **Tem login com e-mail e senha** — cada pessoa da oficina entra com o seu acesso
+- **Perfil e configurações** — na primeira entrada cria seu perfil; em Configurações cadastra os dados da oficina (nome, telefone, endereço, CNPJ), que saem no PDF
 
 O sistema está **no ar na internet** e pronto para usar. Não precisa instalar nada para começar.
 
@@ -25,9 +26,11 @@ O sistema está **no ar na internet** e pronto para usar. Não precisa instalar 
 
 1. Abra no navegador: **https://orca-pro-nine.vercel.app**
 2. Crie sua conta com e-mail e senha
-3. Cadastre seus clientes
-4. Crie orçamentos
-5. Baixe o PDF e mande para o cliente
+3. Crie seu **perfil** (o sistema pede sozinho na primeira entrada)
+4. Em **Configurações**, cadastre os dados da oficina (nome, telefone, endereço, CNPJ)
+5. Cadastre seus clientes
+6. Crie orçamentos
+7. Baixe o PDF e mande para o cliente
 
 Pronto. O sistema roda em qualquer navegador, no computador ou no celular.
 
@@ -190,6 +193,13 @@ Quando quiser desligar, feche as duas janelas do terminal ou pressione `Ctrl+C` 
 2. Clique no botão **Baixar PDF**
 3. O PDF vai ser salvo no seu computador, pronto para mandar ao cliente por WhatsApp ou e-mail
 
+### Configurar perfil e oficina
+
+1. Na primeira entrada, o sistema pede para criar seu **perfil** (seu nome)
+2. No menu lateral, clique em **Configurações**
+3. Preencha nome da oficina, telefone, e-mail, endereço e CNPJ
+4. Clique em **Salvar** — estes dados saem no cabeçalho e na assinatura de todo PDF
+
 ---
 
 ## Estrutura do projeto
@@ -268,6 +278,15 @@ Todas as rotas abaixo de `/api` exigem o cabeçalho `Authorization: Bearer <toke
 | PUT    | `/api/veiculos/:id` | Atualiza nome/placa                              |
 | DELETE | `/api/veiculos/:id` | Exclui (orçamentos ficam sem veículo)            |
 
+### Perfil e loja (configurações)
+
+| Método | Rota           | Descrição                                    |
+| ------ | -------------- | -------------------------------------------- |
+| GET    | `/api/perfil`  | Devolve o perfil (404 se ainda não criou)    |
+| PUT    | `/api/perfil`  | Cria ou atualiza o perfil                    |
+| GET    | `/api/loja`    | Devolve os dados da oficina (404 se vazio)   |
+| PUT    | `/api/loja`    | Cria ou atualiza os dados da oficina         |
+
 ### Orçamentos
 
 | Método | Rota                      | Descrição                                                                 |
@@ -296,10 +315,12 @@ curl -H "Authorization: Bearer SEU_TOKEN" http://localhost:3333/api/clientes
 
 ---
 
-## Banco de dados (4 tabelas + 4 atualizações)
+## Banco de dados (6 tabelas + 5 atualizações)
 
 - **clientes** — guarda cada pessoa (nome, contato), cada um com seu dono (`user_id`)
 - **veiculos** — guarda os veículos de cada cliente (moto, carro, placa)
+- **perfis** — guarda quem usa o sistema (nome por usuário)
+- **loja** — guarda os dados da oficina (nome, telefone, endereço, CNPJ — usados no PDF)
 - **orcamentos** — guarda o cabeçalho de cada orçamento (cliente, veículo, total, desconto, status, validade)
 - **orcamento_itens** — guarda cada item de cada orçamento (descrição, quantidade, valor unitário)
 
@@ -310,6 +331,7 @@ As atualizações são aplicadas em ordem pelos arquivos em `supabase/migrations
 3. `0003_transacoes_orcamento.sql` — funções que salvam orçamento + itens numa transação só
 4. `0004_catalogo_itens.sql` — tabela do catálogo de peças e serviços
 5. `0005_veiculos.sql` — tabela de veículos + veículo no orçamento (leva os antigos junto)
+6. `0006_perfil_loja.sql` — tabelas de perfil e dados da loja
 
 ---
 

@@ -300,6 +300,49 @@ export const catalogoSchema = z.object({
 
 export const catalogoAtualizarSchema = catalogoSchema;
 
+// ---------- Perfil (quem usa o sistema) ----------
+export const perfilSchema = z.object({
+  nome: z
+    .string({ error: "Digite seu nome." })
+    .trim()
+    .min(LIMITES.nomeMin, { error: "Nome curto demais (mínimo 2 letras)." })
+    .max(LIMITES.nomeMax, { error: "Nome muito longo (máximo 120 letras)." }),
+});
+
+// ---------- Loja (dados da oficina, usados no PDF) ----------
+export const lojaSchema = z.object({
+  nome_loja: z
+    .string({ error: "Digite o nome da oficina." })
+    .trim()
+    .min(LIMITES.nomeMin, {
+      error: "Nome da oficina curto demais (mínimo 2 letras).",
+    })
+    .max(LIMITES.nomeMax, {
+      error: "Nome da oficina muito longo (máximo 120 letras).",
+    }),
+  telefone: textoOpcional(
+    LIMITES.telefoneMax,
+    "Telefone muito longo (máximo 20 caracteres).",
+  ),
+  email: z.preprocess(
+    vazioParaIndefinido,
+    z
+      .string({ error: "E-mail inválido." })
+      .trim()
+      .max(LIMITES.emailMax, { error: "E-mail muito longo." })
+      .email({ error: "E-mail inválido." })
+      .optional(),
+  ),
+  endereco: textoOpcional(
+    LIMITES.enderecoMax,
+    "Endereço muito longo (máximo 200 letras).",
+  ),
+  cnpj: textoOpcional(
+    LIMITES.documentoMax,
+    "CNPJ muito longo (máximo 20 caracteres).",
+  ),
+});
+
 // ---------- Funções legadas (mantidas por compatibilidade) ----------
 
 // Valida a lista de itens do orçamento.

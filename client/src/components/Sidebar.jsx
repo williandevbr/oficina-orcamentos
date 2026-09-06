@@ -4,6 +4,8 @@ import {
   Users,
   FileText,
   Package,
+  User,
+  Settings,
   Wrench,
   LogOut,
   X,
@@ -17,11 +19,18 @@ const links = [
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/orcamentos", label: "Orçamentos", icon: FileText },
   { to: "/catalogo", label: "Catálogo", icon: Package },
+  { to: "/perfil", label: "Meu perfil", icon: User },
+  { to: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 // Sidebar = menu lateral azul escuro.
-// No celular vira drawer (abre/fecha); no desktop fica sempre visível.
-export default function Sidebar({ aberto = false, aoFechar = () => {} }) {
+// No celular vira drawer (abre/fecha); no desktop fica visível
+// ou escondido pelo botão de 3 tracinhos (prop "recolhido").
+export default function Sidebar({
+  aberto = false,
+  aoFechar = () => {},
+  recolhido = false,
+}) {
   const { usuario, sair } = useAuth();
 
   async function aoSair() {
@@ -47,7 +56,7 @@ export default function Sidebar({ aberto = false, aoFechar = () => {} }) {
         id="menu-lateral"
         className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-blue-950 text-white transition-transform duration-200 ${
           aberto ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
+        } ${recolhido ? "lg:-translate-x-full" : "lg:translate-x-0"}`}
       >
         {/* Logo do sistema */}
         <div className="flex items-center gap-3 px-6 py-6">

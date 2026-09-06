@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
   Route,
   Outlet,
   Link,
+  Navigate,
+  useLocation,
 } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Toaster } from "sonner";
-import { AuthProvider } from "./contexts/AuthContext.jsx";
+import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
 import ExigirLogin from "./components/ExigirLogin.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import Login from "./pages/Login.jsx";
@@ -16,28 +18,77 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Clientes from "./pages/Clientes.jsx";
 import Orcamentos from "./pages/Orcamentos.jsx";
 import Catalogo from "./pages/Catalogo.jsx";
+import Perfil from "./pages/Perfil.jsx";
+import Configuracoes from "./pages/Configuracoes.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import { apiFetch } from "./lib/api.js";
 
-// Estrutura das páginas internas (menu lateral + conteúdo)
-// No celular o menu vira drawer; no desktop fica fixo.
+// Estrutura das páginas internas (menu lateral + conteúdo).
+// No celular o menu vira drawer; no desktop ele recolhe/expande
+// pelo botão de 3 tracinhos (hambúrguer) no topo.
 function LayoutAutenticado() {
-  const [menuAberto, setMenuAberto] = useState(false);
+  const { usuario } = useAuth();
+  const location = useLocation();
+  const [menuAberto, setMenuAberto] = useState(false); // drawer (celular)
+  const [recolhido, setRecolhido] = useState(false); // menu escondido (desktop)
+  const [perfilOk, setPerfilOk] = useState(null); // null = checando
+
+  // Onboarding: na primeira entrada (sem perfil) manda criar o perfil
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      try {
+        const resp = await apiFetch("/api/perfil");
+        if (!ativo) return;
+        if (resp.status === 404) {
+          setPerfilOk(false);
+          return;
+        }
+        const dados = await resp.json().catch(() => ({}));
+        setPerfilOk(Boolean(dados?.nome));
+      } catch {
+        // Sem conexão: não trava o sistema (tenta de novo no próximo login)
+        if (ativo) setPerfilOk(null);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, [usuario]);
+
+  // Sem perfil e fora da página de perfil -> vai criar o perfil
+  if (perfilOk === false && location.pathname !== "/perfil") {
+    return <Navigate to="/perfil" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 lg:flex">
       <Sidebar
         aberto={menuAberto}
         aoFechar={() => setMenuAberto(false)}
+        recolhido={recolhido}
       />
-      <div className="flex min-w-0 flex-1 flex-col lg:ml-64">
-        {/* Barra mobile com hamburger */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/80 p-4 backdrop-blur lg:hidden">
+      <div
+        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${
+          recolhido ? "lg:ml-0" : "lg:ml-64"
+        }`}
+      >
+        {/* Barra do topo (sempre visível) com o botão de 3 tracinhos */}
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/80 p-4 backdrop-blur">
           <button
             type="button"
-            onClick={() => setMenuAberto(true)}
-            aria-label="Abrir menu"
-            aria-expanded={menuAberto}
+            onClick={() => {
+              // No celular abre o menu; no computador esconde/mostra
+              if (window.innerWidth < 1024) {
+                setMenuAberto(true);
+              } else {
+                setRecolhido((v) => !v);
+              }
+            }}
+            aria-label={recolhido ? "Mostrar menu" : "Esconder menu"}
+            aria-expanded={!recolhido}
             aria-controls="menu-lateral"
+            title={recolhido ? "Mostrar menu" : "Esconder menu"}
             className="rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50"
           >
             <Menu className="h-5 w-5" />
@@ -73,6 +124,8 @@ export default function App() {
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/orcamentos" element={<Orcamentos />} />
               <Route path="/catalogo" element={<Catalogo />} />
+              <Route path="/perfil" element={<Perfil />} />
+              <Route path="/configuracoes" element={<Configuracoes />} />
               {/* Rota desconhecida com login: página 404 dentro do layout */}
               <Route path="*" element={<NotFound />} />
             </Route>

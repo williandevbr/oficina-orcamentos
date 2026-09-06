@@ -15,6 +15,8 @@ import {
   orcamentoAtualizarSchema,
   veiculoCriarSchema,
   veiculoAtualizarSchema,
+  perfilSchema,
+  lojaSchema,
   catalogoSchema,
 } from "./validacao.js";
 
@@ -195,6 +197,25 @@ describe("schemas Zod (limites profissionais)", () => {
     const muitos = Array.from({ length: 101 }, () => ({ ...itemOk }));
     expect(
       orcamentoCriarSchema.safeParse({ ...orcOk, itens: muitos }).success,
+    ).toBe(false);
+  });
+});
+
+describe("perfil e loja (schemas)", () => {
+  it("perfil aceita nome válido e recusa curto", () => {
+    expect(perfilSchema.safeParse({ nome: "Carlos" }).success).toBe(true);
+    expect(perfilSchema.safeParse({ nome: "A" }).success).toBe(false);
+    expect(perfilSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("loja aceita dados válidos e recusa sem nome ou e-mail ruim", () => {
+    expect(
+      lojaSchema.safeParse({ nome_loja: "Auto Center Silva" }).success,
+    ).toBe(true);
+    expect(lojaSchema.safeParse({}).success).toBe(false);
+    expect(
+      lojaSchema.safeParse({ nome_loja: "Auto Center", email: "nao-email" })
+        .success,
     ).toBe(false);
   });
 });
