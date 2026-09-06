@@ -4,20 +4,16 @@ import path from "path";
 import { calcularTotais, totalLinha } from "./calculo.js";
 
 // ============================================================
-// Geração do PDF de ORÇAMENTO (modelo inspirado em templates
-// profissionais de invoice: faixa da oficina, tabela com
-// cabeçalho duplo e barra de TOTAL em destaque)
+// Geração do PDF de ORÇAMENTO (visual limpo e elegante)
 // ============================================================
-// Usa a biblioteca pdfmake (a mesma de sistemas de fatura).
-// As fontes Roboto ficam na pasta server/fonts/ (extraídas do
-// próprio pacote, funcionam offline).
+// Biblioteca pdfmake com fontes Roboto offline (pasta server/fonts).
+// Regra de ouro do pdfmake: todo "body" de tabela é uma lista
+// de LINHAS, e cada linha é uma lista de células.
 // ============================================================
 
-// Caminho da pasta de fontes (relativo a este arquivo)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fontsDir = path.resolve(__dirname, "..", "..", "fonts");
 
-// Registra as fontes para o pdfmake (API oficial da versão 0.3)
 pdfmake.addFonts({
   Roboto: {
     normal: path.join(fontsDir, "Roboto-Regular.ttf"),
@@ -27,17 +23,17 @@ pdfmake.addFonts({
   },
 });
 
-// Libera a leitura apenas da pasta de fontes (segurança de acesso local)
 pdfmake.setLocalAccessPolicy((caminho) => caminho.startsWith(fontsDir));
 
-// Paleta do modelo (azul claro + marinho)
-const AZUL = "#4b9fe1";
-const AZUL_CLARO_TEXTO = "#e8f3fd";
-const MARINHO = "#1e3a8a";
+// Paleta: grafite + laranja (contraste alto, leitura fácil)
+const GRAFITE = "#1e293b";
+const LARANJA = "#f97316";
+const LARANJA_ESCURO = "#ea580c";
+const CREME = "#fff7ed";
+const ZEBRA = "#fff7ed";
 const CINZA = "#64748b";
-const CINZA_CLARO = "#94a3b8";
-const ZEBRA = "#f2f8fe";
-const PRETO = "#0f172a";
+const BORDA = "#fed7aa";
+const BRANCO = "#ffffff";
 
 // Formata moeda como R$
 function formatarMoeda(valor) {
@@ -63,13 +59,18 @@ const rotuloStatus = {
   expirado: "Expirado",
 };
 
-// Cor do status (texto) — sem caixa, seguindo o modelo
 const corStatus = {
   rascunho: "#64748b",
   enviado: "#2563eb",
   aprovado: "#16a34a",
   recusado: "#dc2626",
   expirado: "#d97706",
+};
+
+// Tabela sem bordas (limpa)
+const semBorda = {
+  hLineWidth: () => 0,
+  vLineWidth: () => 0,
 };
 
 // "Molde" do documento: recebe o orçamento completo (com cliente e itens)
@@ -111,6 +112,11 @@ export async function gerarPdfOrcamento(orcamento) {
   );
 
   const corSelo = corStatus[orcamento.status] || "#64748b";
+  const textoStatus = (
+    rotuloStatus[orcamento.status] ||
+    orcamento.status ||
+    "—"
+  ).toUpperCase();
 
   // Subtotais por grupo (peças x mão de obra)
   const subtotalPecas =
@@ -126,281 +132,298 @@ export async function gerarPdfOrcamento(orcamento) {
         .reduce((s, i) => s + i.total, 0) * 100,
     ) / 100;
 
+  const linhaVeiculo = [cliente.veiculo, cliente.placa]
+    .filter(Boolean)
+    .join("  •  ");
+  const contatoOficina = [oficina.telefone, oficina.endereco]
+    .filter(Boolean)
+    .join("  •  ");
+
+  // Linha da tabela de itens (uma linha = lista de 5 células)
+  const linhaItem = (item, i) => [
+    { text: item.descricao, color: GRAFITE, fillColor: i % 2 ? BRANCO : ZEBRA },
+    {
+      text: item.tipo === "peca" ? "Peça" : "Serviço",
+      alignment: "center",
+      fontSize: 8,
+      color: CINZA,
+      fillColor: i % 2 ? BRANCO : ZEBRA,
+    },
+    {
+      text: String(Number(item.quantidade)),
+      alignment: "center",
+      color: CINZA,
+      fillColor: i % 2 ? BRANCO : ZEBRA,
+    },
+    {
+      text: formatarMoeda(item.valor_unitario),
+      alignment: "right",
+      color: CINZA,
+      fillColor: i % 2 ? BRANCO : ZEBRA,
+    },
+    {
+      text: formatarMoeda(item.total),
+      alignment: "right",
+      bold: true,
+      color: GRAFITE,
+      fillColor: i % 2 ? BRANCO : ZEBRA,
+    },
+  ];
+
   const docDefinition = {
     pageSize: "A4",
-    pageMargins: [36, 0, 36, 34],
+    pageMargins: [40, 30, 40, 40],
     defaultStyle: {
       font: "Roboto",
       fontSize: 9,
-      lineHeight: 1.35,
-      color: PRETO,
+      lineHeight: 1.4,
+      color: GRAFITE,
     },
-    // Faixa superior sem margem (encosta no topo, como no modelo)
-    header: {
-      table: {
-        widths: ["*", "auto"],
-        body: [
-          [
-            {
-              stack: [
-                {
-                  text: oficina.nome.toUpperCase(),
-                  bold: true,
-                  fontSize: 20,
-                  color: "#ffffff",
-                },
-                {
-                  text: "ORÇAMENTOS PARA OFICINAS",
-                  fontSize: 7,
-                  color: AZUL_CLARO_TEXTO,
-                  margin: [0, 2, 0, 0],
-                },
-              ],
-              margin: [36, 22, 0, 22],
-            },
-            {
-              stack: [
-                ...(oficina.telefone
-                  ? [
-                      {
-                        text: `Fone: ${oficina.telefone}`,
-                        fontSize: 8,
-                        color: "#ffffff",
-                        alignment: "right",
-                      },
-                    ]
-                  : []),
-                ...(oficina.endereco
-                  ? [
-                      {
-                        text: oficina.endereco,
-                        fontSize: 8,
-                        color: AZUL_CLARO_TEXTO,
-                        alignment: "right",
-                      },
-                    ]
-                  : []),
-                ...(oficina.cnpj
-                  ? [
-                      {
-                        text: `CNPJ: ${oficina.cnpj}`,
-                        fontSize: 8,
-                        color: AZUL_CLARO_TEXTO,
-                        alignment: "right",
-                      },
-                    ]
-                  : []),
-              ],
-              margin: [0, 24, 36, 22],
-            },
-          ],
-        ],
-        },
-        layout: {
-        fillColor: () => AZUL,
-        hLineColor: () => AZUL,
-        vLineColor: () => AZUL,
-        paddingTop: () => 0,
-        paddingBottom: () => 0,
-        paddingLeft: () => 0,
-        paddingRight: () => 0,
-      },
-    },
+
     content: [
-      // ===== Para + título do documento =====
+      // ===== Faixa da oficina (grafite + laranja) =====
       {
-        columns: [
-          {
-            stack: [
-              { text: "Para:", fontSize: 8, color: CINZA },
+        table: {
+          widths: ["*", "auto"],
+          body: [
+            [
               {
-                text: (cliente.nome || "—").toUpperCase(),
-                bold: true,
-                fontSize: 11,
-                color: PRETO,
-                margin: [0, 2, 0, 0],
+                stack: [
+                  {
+                    text: oficina.nome.toUpperCase(),
+                    bold: true,
+                    fontSize: 20,
+                    color: BRANCO,
+                  },
+                  {
+                    text: contatoOficina || "ORÇAMENTOS PARA OFICINAS",
+                    fontSize: 8,
+                    color: "#fdba74",
+                    margin: [0, 3, 0, 0],
+                  },
+                ],
+                fillColor: GRAFITE,
+                margin: [4, 4, 4, 4],
               },
               {
-                text: [cliente.veiculo, cliente.placa, cliente.telefone]
-                  .filter(Boolean)
-                  .join("  •  "),
-                fontSize: 8,
-                color: CINZA,
-                margin: [0, 2, 0, 0],
-              },
-            ],
-          },
-          {
-            stack: [
-              {
-                text: "ORÇAMENTO",
-                bold: true,
-                fontSize: 18,
-                color: PRETO,
-                alignment: "right",
-              },
-              {
-                text: `Nº ${numero}`,
-                fontSize: 10,
-                color: CINZA,
-                alignment: "right",
-              },
-              {
-                text: `Emissão: ${dataEmissao}  •  Válido até ${validoAteTxt}`,
-                fontSize: 8,
-                color: CINZA,
-                alignment: "right",
-              },
-              {
-                text: (rotuloStatus[orcamento.status] || orcamento.status || "").toUpperCase(),
-                fontSize: 8,
-                bold: true,
-                color: corSelo,
-                alignment: "right",
+                stack: [
+                  {
+                    text: "ORÇAMENTO",
+                    bold: true,
+                    fontSize: 16,
+                    color: LARANJA,
+                    alignment: "right",
+                  },
+                  {
+                    text: `Nº ${numero}`,
+                    fontSize: 11,
+                    color: BRANCO,
+                    alignment: "right",
+                    margin: [0, 2, 0, 0],
+                  },
+                ],
+                fillColor: GRAFITE,
+                margin: [4, 4, 4, 4],
               },
             ],
-          },
-        ],
-        columnGap: 20,
-        margin: [0, 14, 0, 0],
+          ],
+        },
+        layout: semBorda,
+        margin: [0, 0, 0, 14],
       },
 
-      // ===== Tabela de itens (cabeçalho duplo do modelo) =====
+      // ===== Cartões: cliente / validade / status =====
+      {
+        table: {
+          widths: ["*", "*", "*"],
+          body: [
+            [
+              {
+                stack: [
+                  { text: "CLIENTE", fontSize: 7, bold: true, color: LARANJA_ESCURO },
+                  {
+                    text: (cliente.nome || "—").toUpperCase(),
+                    bold: true,
+                    fontSize: 10,
+                    color: GRAFITE,
+                    margin: [0, 2, 0, 0],
+                  },
+                  {
+                    text: linhaVeiculo || cliente.telefone || "—",
+                    fontSize: 8,
+                    color: CINZA,
+                    margin: [0, 1, 0, 0],
+                  },
+                ],
+                fillColor: CREME,
+                margin: [6, 6, 6, 6],
+              },
+              {
+                stack: [
+                  { text: "VALIDADE", fontSize: 7, bold: true, color: LARANJA_ESCURO },
+                  {
+                    text: `Emitido em ${dataEmissao}`,
+                    fontSize: 8,
+                    color: GRAFITE,
+                    margin: [0, 2, 0, 0],
+                  },
+                  {
+                    text: `Válido até ${validoAteTxt}`,
+                    fontSize: 8,
+                    color: GRAFITE,
+                  },
+                  {
+                    text: `Protocolo ${protocolo || "—"}`,
+                    fontSize: 7,
+                    color: CINZA,
+                    margin: [0, 1, 0, 0],
+                  },
+                ],
+                fillColor: CREME,
+                margin: [6, 6, 6, 6],
+              },
+              {
+                stack: [
+                  { text: "STATUS", fontSize: 7, bold: true, color: LARANJA_ESCURO },
+                  {
+                    text: textoStatus,
+                    bold: true,
+                    fontSize: 12,
+                    color: corSelo,
+                    margin: [0, 4, 0, 0],
+                  },
+                  {
+                    text: `${validadeDias} dias de validade`,
+                    fontSize: 8,
+                    color: CINZA,
+                    margin: [0, 1, 0, 0],
+                  },
+                ],
+                fillColor: CREME,
+                margin: [6, 6, 6, 6],
+              },
+            ],
+          ],
+        },
+        layout: semBorda,
+        margin: [0, 0, 0, 14],
+      },
+
+      // ===== Tabela de itens =====
       {
         table: {
           headerRows: 1,
-          widths: ["*", "12%", "10%", "18%", "18%"],
+          widths: ["*", "12%", "9%", "18%", "18%"],
           body: [
             [
               {
                 text: "DESCRIÇÃO",
                 bold: true,
                 fontSize: 8,
-                color: "#ffffff",
-                fillColor: AZUL,
+                color: BRANCO,
+                fillColor: GRAFITE,
               },
               {
                 text: "TIPO",
                 bold: true,
                 fontSize: 8,
-                color: "#ffffff",
-                fillColor: MARINHO,
+                color: BRANCO,
+                fillColor: LARANJA,
                 alignment: "center",
               },
               {
                 text: "QTD",
                 bold: true,
                 fontSize: 8,
-                color: "#ffffff",
-                fillColor: MARINHO,
+                color: BRANCO,
+                fillColor: LARANJA,
                 alignment: "center",
               },
               {
                 text: "VALOR UNIT.",
                 bold: true,
                 fontSize: 8,
-                color: "#ffffff",
-                fillColor: MARINHO,
+                color: BRANCO,
+                fillColor: LARANJA,
                 alignment: "right",
               },
               {
                 text: "TOTAL",
                 bold: true,
                 fontSize: 8,
-                color: "#ffffff",
-                fillColor: MARINHO,
+                color: BRANCO,
+                fillColor: LARANJA,
                 alignment: "right",
               },
             ],
-            ...itensCalc.map((item, i) => [
-              {
-                text: item.descricao,
-                fillColor: i % 2 === 0 ? ZEBRA : null,
-              },
-              {
-                text: item.tipo === "peca" ? "Peça" : "Serviço",
-                alignment: "center",
-                fontSize: 8,
-                color: CINZA,
-                fillColor: i % 2 === 0 ? ZEBRA : null,
-              },
-              {
-                text: String(Number(item.quantidade)),
-                alignment: "center",
-                fillColor: i % 2 === 0 ? ZEBRA : null,
-              },
-              {
-                text: formatarMoeda(item.valor_unitario),
-                alignment: "right",
-                fillColor: i % 2 === 0 ? ZEBRA : null,
-              },
-              {
-                text: formatarMoeda(item.total),
-                alignment: "right",
-                bold: true,
-                fillColor: i % 2 === 0 ? ZEBRA : null,
-              },
-            ]),
+            ...itensCalc.map((item, i) => linhaItem(item, i)),
           ],
         },
         layout: {
           hLineWidth: () => 0,
           vLineWidth: () => 0,
-          paddingTop: () => 6,
-          paddingBottom: () => 6,
+          paddingTop: () => 7,
+          paddingBottom: () => 7,
           paddingLeft: () => 8,
           paddingRight: () => 8,
         },
-        margin: [0, 14, 0, 0],
+        margin: [0, 0, 0, 10],
       },
 
-      // ===== Subtotais à direita =====
+      // ===== Subtotais =====
       {
         columns: [
           { width: "*", text: "" },
           {
-            width: "42%",
-            margin: [0, 10, 0, 0],
+            width: "46%",
             table: {
-              widths: ["55%", "45%"],
+              widths: ["*", "auto"],
               body: [
                 [
                   { text: "Peças", fontSize: 8, color: CINZA },
                   {
                     text: formatarMoeda(subtotalPecas),
-                    alignment: "right",
                     fontSize: 8,
+                    color: GRAFITE,
+                    alignment: "right",
                   },
                 ],
                 [
                   { text: "Mão de obra", fontSize: 8, color: CINZA },
                   {
                     text: formatarMoeda(subtotalServicos),
-                    alignment: "right",
                     fontSize: 8,
+                    color: GRAFITE,
+                    alignment: "right",
+                  },
+                ],
+                [
+                  { text: "Subtotal", fontSize: 8, color: CINZA },
+                  {
+                    text: formatarMoeda(subtotal),
+                    fontSize: 8,
+                    color: GRAFITE,
+                    alignment: "right",
                   },
                 ],
                 [
                   { text: "Desconto", fontSize: 8, color: CINZA },
                   {
-                    text: formatarMoeda(desconto),
-                    alignment: "right",
+                    text: `− ${formatarMoeda(desconto)}`,
                     fontSize: 8,
+                    color: "#16a34a",
+                    alignment: "right",
                   },
                 ],
               ],
             },
-            layout: {
-              hLineWidth: () => 0,
-              vLineWidth: () => 0,
-              paddingTop: () => 2,
-              paddingBottom: () => 2,
-            },
+            layout: semBorda,
           },
         ],
+        margin: [0, 0, 0, 6],
       },
 
-      // ===== Barra de TOTAL (destaque do modelo) =====
+      // ===== Barra de TOTAL =====
       {
         table: {
           widths: ["*", "auto"],
@@ -409,44 +432,63 @@ export async function gerarPdfOrcamento(orcamento) {
               {
                 text: "TOTAL GERAL",
                 bold: true,
-                fontSize: 11,
-                color: "#ffffff",
+                fontSize: 12,
+                color: BRANCO,
+                fillColor: GRAFITE,
+                margin: [6, 4, 6, 4],
               },
               {
                 text: formatarMoeda(total),
                 bold: true,
-                fontSize: 14,
-                color: "#ffffff",
+                fontSize: 16,
+                color: LARANJA,
+                fillColor: GRAFITE,
                 alignment: "right",
+                margin: [6, 4, 6, 4],
               },
             ],
           ],
         },
-        layout: {
-          fillColor: () => AZUL,
-          hLineColor: () => AZUL,
-          vLineColor: () => AZUL,
-          paddingTop: () => 8,
-          paddingBottom: () => 8,
-          paddingLeft: () => 12,
-          paddingRight: () => 12,
-        },
-        margin: [0, 8, 0, 0],
+        layout: semBorda,
+        margin: [0, 0, 0, 12],
       },
 
-      // ===== Observações (se houver) =====
+      // ===== Observações (só se houver) =====
       ...(orcamento.observacoes
         ? [
             {
-              text: orcamento.observacoes,
-              fontSize: 9,
-              color: "#334155",
-              margin: [0, 14, 0, 0],
+              table: {
+                widths: ["*"],
+                body: [
+                  [
+                    {
+                      stack: [
+                        {
+                          text: "OBSERVAÇÕES",
+                          fontSize: 7,
+                          bold: true,
+                          color: LARANJA_ESCURO,
+                        },
+                        {
+                          text: orcamento.observacoes,
+                          fontSize: 9,
+                          color: GRAFITE,
+                          margin: [0, 3, 0, 0],
+                        },
+                      ],
+                      fillColor: CREME,
+                      margin: [6, 6, 6, 6],
+                    },
+                  ],
+                ],
+              },
+              layout: semBorda,
+              margin: [0, 0, 0, 12],
             },
           ]
         : []),
 
-      // ===== Rodapé do documento: aceite + assinatura =====
+      // ===== Aceite + assinatura (colunas, sem tabela) =====
       {
         columns: [
           {
@@ -454,7 +496,7 @@ export async function gerarPdfOrcamento(orcamento) {
               {
                 text: "Aprovo a execução dos serviços e peças acima, no valor total indicado.",
                 fontSize: 8,
-                color: "#334155",
+                color: CINZA,
               },
               {
                 text:
@@ -462,21 +504,21 @@ export async function gerarPdfOrcamento(orcamento) {
                     ? `Aprovado • Protocolo ${protocolo || "—"}. Guarde este PDF como comprovante.`
                     : `Para aprovar, responda este PDF no WhatsApp da oficina informando o protocolo ${protocolo || "—"}.`,
                 fontSize: 7,
-                color: CINZA_CLARO,
+                color: "#94a3b8",
                 margin: [0, 3, 0, 0],
               },
               {
                 text: "Obrigado pela preferência!",
                 bold: true,
-                fontSize: 9,
-                color: PRETO,
-                margin: [0, 10, 0, 0],
+                fontSize: 10,
+                color: LARANJA_ESCURO,
+                margin: [0, 8, 0, 0],
               },
             ],
           },
           {
             stack: [
-              { text: "", margin: [0, 30, 0, 0] },
+              { text: "", margin: [0, 28, 0, 0] },
               {
                 canvas: [
                   {
@@ -485,41 +527,41 @@ export async function gerarPdfOrcamento(orcamento) {
                     y1: 0,
                     x2: 200,
                     y2: 0,
-                    lineWidth: 0.75,
-                    lineColor: "#cbd5e1",
+                    lineWidth: 1,
+                    lineColor: BORDA,
                   },
                 ],
               },
               {
-                text: `${oficina.nome} • ${cliente.nome || "cliente"}`,
+                text: `${oficina.nome}  •  ${cliente.nome || "cliente"}`,
                 fontSize: 7,
-                color: CINZA_CLARO,
+                color: CINZA,
                 alignment: "center",
-                margin: [0, 3, 0, 0],
+                margin: [0, 4, 0, 0],
               },
             ],
             alignment: "right",
           },
         ],
         columnGap: 30,
-        margin: [0, 16, 0, 0],
+        margin: [0, 0, 0, 0],
       },
     ],
 
     // ===== Rodapé (todas as páginas) =====
     footer: (currentPage, pageCount) => ({
-      margin: [36, 0],
+      margin: [40, 0, 40, 0],
       columns: [
         {
           text: `${oficina.nome}${oficina.cnpj ? ` • CNPJ: ${oficina.cnpj}` : ""} • Válido até ${validoAteTxt}`,
           fontSize: 7,
-          color: CINZA_CLARO,
+          color: "#94a3b8",
           alignment: "left",
         },
         {
           text: `Página ${currentPage} de ${pageCount}`,
           fontSize: 7,
-          color: CINZA_CLARO,
+          color: "#94a3b8",
           alignment: "right",
         },
       ],
