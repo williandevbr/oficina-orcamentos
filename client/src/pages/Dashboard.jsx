@@ -1,8 +1,8 @@
 import { Users, FileText, CheckCircle2, Clock, Plus, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import StatsCard from "../components/StatsCard.jsx";
-import { SkeletonStats, Skeleton } from "../components/Skeleton.jsx";
+import StatsCard from "../components/StatsCard";
+import { SkeletonStats, Skeleton } from "../components/Skeleton";
 import { formatarMoeda, formatarData, formatarNumero } from "../utils/format";
 import { calcularValidoAte } from "../utils/mascaras";
 import { apiFetch } from "../lib/api";

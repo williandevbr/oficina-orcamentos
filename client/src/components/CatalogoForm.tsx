@@ -5,6 +5,12 @@ import { X } from "lucide-react";
 // Formulário de item do catálogo (modal)
 // ============================================================
 
+export interface CatalogoFormValores {
+  descricao?: string;
+  tipo?: string;
+  valor_unitario?: number | string;
+}
+
 export default function CatalogoForm({
   form,
   editandoId,
@@ -13,9 +19,17 @@ export default function CatalogoForm({
   aoMudar,
   aoSalvar,
   aoFechar,
+}: {
+  form: CatalogoFormValores;
+  editandoId: string | null;
+  erro?: string;
+  salvando?: boolean;
+  aoMudar: (campo: string, valor: string) => void;
+  aoSalvar: (e: React.FormEvent<HTMLFormElement>) => void;
+  aoFechar: () => void;
 }) {
   useEffect(() => {
-    function aoTeclar(e) {
+    function aoTeclar(e: KeyboardEvent) {
       if (e.key === "Escape") aoFechar();
     }
     window.addEventListener("keydown", aoTeclar);

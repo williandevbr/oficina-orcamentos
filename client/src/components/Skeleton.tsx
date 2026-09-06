@@ -1,11 +1,17 @@
 // Skeleton de carregamento (evita tela vazia / texto seco "Carregando...")
-export function Skeleton({ className = "" }) {
+export function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div className={`animate-pulse rounded bg-slate-200 ${className}`} />
   );
 }
 
-export function SkeletonTabela({ linhas = 5, colunas = 5 }) {
+export function SkeletonTabela({
+  linhas = 5,
+  colunas = 5,
+}: {
+  linhas?: number;
+  colunas?: number;
+}) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="space-y-3 p-5">

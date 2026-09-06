@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X, Plus, Trash2, Car } from "lucide-react";
+import type { Veiculo } from "../types";
 
 // ============================================================
 // Modal de VEÍCULOS do cliente (1 pessoa -> N veículos)
@@ -15,6 +16,11 @@ import { X, Plus, Trash2, Car } from "lucide-react";
 //   onFechar                        -> fecha
 // ============================================================
 
+export interface NovoVeiculo {
+  veiculo: string;
+  placa: string;
+}
+
 export default function VeiculosModal({
   clienteNome,
   veiculos = [],
@@ -23,6 +29,14 @@ export default function VeiculosModal({
   onAdicionar,
   onExcluir,
   onFechar,
+}: {
+  clienteNome: string;
+  veiculos?: Veiculo[];
+  salvando?: boolean;
+  erro?: string;
+  onAdicionar: (dados: NovoVeiculo) => void;
+  onExcluir: (id: string) => void;
+  onFechar: () => void;
 }) {
   const [veiculo, setVeiculo] = useState("");
   const [placa, setPlaca] = useState("");
@@ -30,14 +44,14 @@ export default function VeiculosModal({
 
   // Fecha com Escape
   useEffect(() => {
-    function aoTeclar(e) {
+    function aoTeclar(e: KeyboardEvent) {
       if (e.key === "Escape") onFechar();
     }
     window.addEventListener("keydown", aoTeclar);
     return () => window.removeEventListener("keydown", aoTeclar);
   }, [onFechar]);
 
-  function aoAdicionar(e) {
+  function aoAdicionar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErroLocal("");
     if (veiculo.trim().length < 2) {

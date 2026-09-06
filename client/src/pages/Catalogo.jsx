@@ -1,10 +1,10 @@
 import { Package, Plus, Pencil, Trash2, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import CatalogoForm from "../components/CatalogoForm.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
-import Paginacao from "../components/Paginacao.jsx";
-import { SkeletonTabela } from "../components/Skeleton.jsx";
+import CatalogoForm from "../components/CatalogoForm";
+import ConfirmDialog from "../components/ConfirmDialog";
+import Paginacao from "../components/Paginacao";
+import { SkeletonTabela } from "../components/Skeleton";
 import { formatarMoeda } from "../utils/format";
 import { apiFetch } from "../lib/api";
 

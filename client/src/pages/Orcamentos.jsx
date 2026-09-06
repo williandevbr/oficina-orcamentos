@@ -12,10 +12,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import OrcamentoForm from "../components/OrcamentoForm.jsx";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
-import Paginacao from "../components/Paginacao.jsx";
-import { SkeletonTabela } from "../components/Skeleton.jsx";
+import OrcamentoForm from "../components/OrcamentoForm";
+import ConfirmDialog from "../components/ConfirmDialog";
+import Paginacao from "../components/Paginacao";
+import { SkeletonTabela } from "../components/Skeleton";
 import { formatarMoeda, formatarData, formatarNumero } from "../utils/format";
 import {
   montarLinkWhatsApp,
