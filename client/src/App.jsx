@@ -4,7 +4,6 @@ import {
   Routes,
   Route,
   Outlet,
-  Link,
   Navigate,
   useLocation,
 } from "react-router-dom";
@@ -67,35 +66,37 @@ function LayoutAutenticado() {
         aberto={menuAberto}
         aoFechar={() => setMenuAberto(false)}
         recolhido={recolhido}
+        aoRecolher={() => setRecolhido(true)}
       />
       <div
         className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${
           recolhido ? "lg:ml-0" : "lg:ml-64"
         }`}
       >
-        {/* Barra do topo (sempre visível) com o botão de 3 tracinhos */}
+        {/* Barra do topo com o botão de 3 tracinhos.
+            Ele só aparece quando o menu está escondido:
+            no celular some com o menu aberto; no computador
+            some com o menu visível (para fechar, use o X do menu). */}
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/80 p-4 backdrop-blur">
           <button
             type="button"
             onClick={() => {
-              // No celular abre o menu; no computador esconde/mostra
+              // No celular abre o menu; no computador mostra o menu
               if (window.innerWidth < 1024) {
                 setMenuAberto(true);
               } else {
-                setRecolhido((v) => !v);
+                setRecolhido(false);
               }
             }}
-            aria-label={recolhido ? "Mostrar menu" : "Esconder menu"}
-            aria-expanded={!recolhido}
+            aria-label="Mostrar menu"
             aria-controls="menu-lateral"
-            title={recolhido ? "Mostrar menu" : "Esconder menu"}
-            className="rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50"
+            title="Mostrar menu"
+            className={`rounded-lg border border-slate-300 p-2 text-slate-600 transition-all duration-300 hover:rotate-90 hover:bg-slate-50 active:scale-95 ${
+              menuAberto ? "hidden" : recolhido ? "" : "lg:hidden"
+            }`}
           >
             <Menu className="h-5 w-5" />
           </button>
-          <Link to="/" className="text-base font-bold text-slate-900">
-            OrcaPro
-          </Link>
         </header>
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
           <Outlet />

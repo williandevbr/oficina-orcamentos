@@ -9,6 +9,7 @@ import {
   Wrench,
   LogOut,
   X,
+  PanelLeftClose,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
@@ -17,8 +18,8 @@ import { useAuth } from "../contexts/AuthContext.jsx";
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/clientes", label: "Clientes", icon: Users },
-  { to: "/orcamentos", label: "Orçamentos", icon: FileText },
   { to: "/catalogo", label: "Catálogo", icon: Package },
+  { to: "/orcamentos", label: "Orçamentos", icon: FileText },
   { to: "/perfil", label: "Meu perfil", icon: User },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ];
@@ -26,10 +27,12 @@ const links = [
 // Sidebar = menu lateral azul escuro.
 // No celular vira drawer (abre/fecha); no desktop fica visível
 // ou escondido pelo botão de 3 tracinhos (prop "recolhido").
+// Para esconder com o menu aberto: X no celular, seta no computador.
 export default function Sidebar({
   aberto = false,
   aoFechar = () => {},
   recolhido = false,
+  aoRecolher = () => {},
 }) {
   const { usuario, sair } = useAuth();
 
@@ -71,9 +74,18 @@ export default function Sidebar({
             type="button"
             onClick={aoFechar}
             aria-label="Fechar menu"
-            className="rounded-lg p-2 text-blue-300 hover:bg-blue-900 hover:text-white lg:hidden"
+            className="rounded-lg p-2 text-blue-300 transition-all duration-300 hover:rotate-90 hover:bg-blue-900 hover:text-white lg:hidden"
           >
             <X className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={aoRecolher}
+            aria-label="Esconder menu"
+            title="Esconder menu"
+            className="hidden rounded-lg p-2 text-blue-300 transition-all duration-300 hover:-translate-x-0.5 hover:bg-blue-900 hover:text-white lg:block"
+          >
+            <PanelLeftClose className="h-5 w-5" />
           </button>
         </div>
 
