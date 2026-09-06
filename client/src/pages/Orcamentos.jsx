@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FileText,
   Plus,
@@ -197,6 +198,18 @@ export default function Orcamentos() {
   const [pagina, setPagina] = useState(1);
   const [idParaExcluir, setIdParaExcluir] = useState(null);
   const [excluindo, setExcluindo] = useState(false);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Vindo do Dashboard ("Novo orçamento"): abre o modal direto
+  useEffect(() => {
+    if (location.state?.novo) {
+      abrirNovo();
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Debounce da busca (300ms) + volta para a página 1
   useEffect(() => {

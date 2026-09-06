@@ -1,5 +1,6 @@
 import { Users, Plus, Pencil, Trash2, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import ClienteForm from "../components/ClienteForm.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
@@ -69,6 +70,18 @@ export default function Clientes() {
   const [pagina, setPagina] = useState(1);
   const [idParaExcluir, setIdParaExcluir] = useState(null);
   const [excluindo, setExcluindo] = useState(false);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Vindo do Dashboard ("Novo cliente"): abre o modal direto
+  useEffect(() => {
+    if (location.state?.novo) {
+      abrirNovo();
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Debounce da busca (300ms) + reseta para a página 1
   useEffect(() => {
