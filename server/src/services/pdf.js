@@ -4,11 +4,7 @@ import path from "path";
 import { calcularTotais, totalLinha } from "./calculo.js";
 
 // ============================================================
-// Geração do PDF de ORÇAMENTO (visual limpo e elegante)
-// ============================================================
-// Biblioteca pdfmake com fontes Roboto offline (pasta server/fonts).
-// Regra de ouro do pdfmake: todo "body" de tabela é uma lista
-// de LINHAS, e cada linha é uma lista de células.
+// Geração do PDF de ORÇAMENTO (design limpo e moderno)
 // ============================================================
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -25,14 +21,16 @@ pdfmake.addFonts({
 
 pdfmake.setLocalAccessPolicy((caminho) => caminho.startsWith(fontsDir));
 
-// Paleta: grafite + laranja (contraste alto, leitura fácil)
-const GRAFITE = "#1e293b";
-const LARANJA = "#f97316";
-const LARANJA_ESCURO = "#ea580c";
-const CREME = "#fff7ed";
-const ZEBRA = "#fff7ed";
-const CINZA = "#64748b";
-const BORDA = "#fed7aa";
+// Paleta: azul suave + grafite escuro (moderno, profissional, sem agressividade)
+const COR_PRIMARIA = "#2563eb";     // azul vibrante
+const COR_ESCURA = "#1e3a5f";       // azul escuro profundo
+const COR_MEDIA = "#3b82f6";        // azul médio
+const COR_BAIXA = "#dbeafe";        // azul claro suave
+const COR_FUNDO = "#f8fafc";        // cinza claro quase branco
+const TEXTO = "#0f172a";            // preto suave
+const TEXTO_MEDIO = "#475569";      // cinza texto
+const TEXTO_BAIXA = "#94a3b8";      // cinza leve
+const VERDE = "#16a34a";
 const BRANCO = "#ffffff";
 
 // Formata moeda como R$
@@ -43,7 +41,6 @@ function formatarMoeda(valor) {
   }).format(Number(valor) || 0);
 }
 
-// Dados da oficina (configuráveis no arquivo .env)
 const oficina = {
   nome: process.env.OFICINA_NOME || "OrcaPro",
   telefone: process.env.OFICINA_TELEFONE || "",
@@ -73,7 +70,14 @@ const semBorda = {
   vLineWidth: () => 0,
 };
 
-// "Molde" do documento: recebe o orçamento completo (com cliente e itens)
+// Linha fina de separação
+const linhaFina = {
+  hLineWidth: () => 0.5,
+  vLineWidth: () => 0,
+  hLineColor: () => "#e2e8f0",
+  vLineColor: () => "#e2e8f0",
+};
+
 export async function gerarPdfOrcamento(orcamento) {
   const cliente = orcamento.clientes || {};
   const itens = orcamento.orcamento_itens || [];
@@ -82,7 +86,6 @@ export async function gerarPdfOrcamento(orcamento) {
     orcamento.created_at || Date.now(),
   ).toLocaleDateString("pt-BR");
 
-  // Validade com data pronta (o cliente não precisa calcular)
   const validadeDias = Number(orcamento.validade_dias) || 7;
   const validoAte = new Date(orcamento.created_at || Date.now());
   validoAte.setDate(validoAte.getDate() + validadeDias);
@@ -90,19 +93,16 @@ export async function gerarPdfOrcamento(orcamento) {
     ? "—"
     : validoAte.toLocaleDateString("pt-BR");
 
-  // Protocolo curto do aceite digital (identifica este orçamento)
   const protocolo = String(orcamento.id || "")
     .replace(/-/g, "")
     .slice(0, 8)
     .toUpperCase();
 
-  // Totais de linha recalculados (iguais aos do resumo — nunca divergem)
   const itensCalc = itens.map((item) => ({
     ...item,
     total: totalLinha(item.quantidade, item.valor_unitario),
   }));
 
-  // Recalcula os totais com a mesma regra do sistema (fonte única)
   const { subtotal, desconto, total } = calcularTotais(
     itensCalc.map((item) => ({
       quantidade: item.quantidade,
@@ -118,7 +118,6 @@ export async function gerarPdfOrcamento(orcamento) {
     "—"
   ).toUpperCase();
 
-  // Subtotais por grupo (peças x mão de obra)
   const subtotalPecas =
     Math.round(
       itensCalc
@@ -132,7 +131,6 @@ export async function gerarPdfOrcamento(orcamento) {
         .reduce((s, i) => s + i.total, 0) * 100,
     ) / 100;
 
-  // Veículo do atendimento (tabela nova) com reserva no cadastro do cliente
   const veicOrc = orcamento.veiculos || {};
   const linhaVeiculo = [
     veicOrc.veiculo || cliente.veiculo,
@@ -140,325 +138,395 @@ export async function gerarPdfOrcamento(orcamento) {
   ]
     .filter(Boolean)
     .join("  •  ");
-  const contatoOficina = [oficina.telefone, oficina.endereco]
-    .filter(Boolean)
-    .join("  •  ");
 
-  // Linha da tabela de itens (uma linha = lista de 5 células)
-  const linhaItem = (item, i) => [
-    { text: item.descricao, color: GRAFITE, fillColor: i % 2 ? BRANCO : ZEBRA },
-    {
-      text: item.tipo === "peca" ? "Peça" : "Serviço",
-      alignment: "center",
-      fontSize: 8,
-      color: CINZA,
-      fillColor: i % 2 ? BRANCO : ZEBRA,
-    },
-    {
-      text: String(Number(item.quantidade)),
-      alignment: "center",
-      color: CINZA,
-      fillColor: i % 2 ? BRANCO : ZEBRA,
-    },
-    {
-      text: formatarMoeda(item.valor_unitario),
-      alignment: "right",
-      color: CINZA,
-      fillColor: i % 2 ? BRANCO : ZEBRA,
-    },
-    {
-      text: formatarMoeda(item.total),
-      alignment: "right",
-      bold: true,
-      color: GRAFITE,
-      fillColor: i % 2 ? BRANCO : ZEBRA,
-    },
-  ];
-
+  // ============================================================
+  // DOCUMENT DEFINITION — layout limpo e elegante
+  // ============================================================
   const docDefinition = {
     pageSize: "A4",
-    pageMargins: [40, 30, 40, 40],
+    pageMargins: [40, 50, 40, 50],
     defaultStyle: {
       font: "Roboto",
       fontSize: 9,
-      lineHeight: 1.4,
-      color: GRAFITE,
+      lineHeight: 1.3,
+      color: TEXTO,
     },
 
     content: [
-      // ===== Faixa da oficina (grafite + laranja) =====
+      // ── TOPO: nome da oficina + orçamento Nº ──
       {
-        table: {
-          widths: ["*", "auto"],
-          body: [
-            [
+        columns: [
+          // Lado esquerdo: nome + contato
+          {
+            width: "*",
+            stack: [
               {
-                stack: [
-                  {
-                    text: oficina.nome.toUpperCase(),
-                    bold: true,
-                    fontSize: 20,
-                    color: BRANCO,
-                  },
-                  {
-                    text: contatoOficina || "ORÇAMENTOS PARA OFICINAS",
-                    fontSize: 8,
-                    color: "#fdba74",
-                    margin: [0, 3, 0, 0],
-                  },
-                ],
-                fillColor: GRAFITE,
-                margin: [4, 4, 4, 4],
+                text: oficina.nome,
+                bold: true,
+                fontSize: 22,
+                color: COR_ESCURA,
               },
               {
-                stack: [
-                  {
-                    text: "ORÇAMENTO",
-                    bold: true,
-                    fontSize: 16,
-                    color: LARANJA,
-                    alignment: "right",
-                  },
-                  {
-                    text: `Nº ${numero}`,
-                    fontSize: 11,
-                    color: BRANCO,
-                    alignment: "right",
-                    margin: [0, 2, 0, 0],
-                  },
-                ],
-                fillColor: GRAFITE,
-                margin: [4, 4, 4, 4],
+                text: [oficina.telefone, oficina.endereco, oficina.cnpj]
+                  .filter(Boolean)
+                  .join("  •  "),
+                fontSize: 8,
+                color: TEXTO_BAIXA,
+                margin: [0, 2, 0, 0],
               },
             ],
-          ],
-        },
-        layout: semBorda,
-        margin: [0, 0, 0, 14],
-      },
-
-      // ===== Cartões: cliente / validade / status =====
-      {
-        table: {
-          widths: ["*", "*", "*"],
-          body: [
-            [
+          },
+          // Lado direito: ORÇAMENTO + número
+          {
+            width: "auto",
+            stack: [
               {
-                stack: [
-                  { text: "CLIENTE", fontSize: 7, bold: true, color: LARANJA_ESCURO },
-                  {
-                    text: (cliente.nome || "—").toUpperCase(),
-                    bold: true,
-                    fontSize: 10,
-                    color: GRAFITE,
-                    margin: [0, 2, 0, 0],
-                  },
-                  {
-                    text: linhaVeiculo || cliente.telefone || "—",
-                    fontSize: 8,
-                    color: CINZA,
-                    margin: [0, 1, 0, 0],
-                  },
-                ],
-                fillColor: CREME,
-                margin: [6, 6, 6, 6],
+                text: "ORÇAMENTO",
+                bold: true,
+                fontSize: 14,
+                color: COR_PRIMARIA,
+                alignment: "right",
               },
               {
-                stack: [
-                  { text: "VALIDADE", fontSize: 7, bold: true, color: LARANJA_ESCURO },
-                  {
-                    text: `Emitido em ${dataEmissao}`,
-                    fontSize: 8,
-                    color: GRAFITE,
-                    margin: [0, 2, 0, 0],
-                  },
-                  {
-                    text: `Válido até ${validoAteTxt}`,
-                    fontSize: 8,
-                    color: GRAFITE,
-                  },
-                  {
-                    text: `Protocolo ${protocolo || "—"}`,
-                    fontSize: 7,
-                    color: CINZA,
-                    margin: [0, 1, 0, 0],
-                  },
-                ],
-                fillColor: CREME,
-                margin: [6, 6, 6, 6],
-              },
-              {
-                stack: [
-                  { text: "STATUS", fontSize: 7, bold: true, color: LARANJA_ESCURO },
-                  {
-                    text: textoStatus,
-                    bold: true,
-                    fontSize: 12,
-                    color: corSelo,
-                    margin: [0, 4, 0, 0],
-                  },
-                  {
-                    text: `${validadeDias} dias de validade`,
-                    fontSize: 8,
-                    color: CINZA,
-                    margin: [0, 1, 0, 0],
-                  },
-                ],
-                fillColor: CREME,
-                margin: [6, 6, 6, 6],
+                text: `Nº ${numero}`,
+                fontSize: 10,
+                color: TEXTO_MEDIO,
+                alignment: "right",
+                margin: [0, 1, 0, 0],
               },
             ],
-          ],
-        },
-        layout: semBorda,
-        margin: [0, 0, 0, 14],
+          },
+        ],
+        columnGap: 20,
+        margin: [0, 0, 0, 6],
       },
 
-      // ===== Tabela de itens =====
+      // Linha separadora
+      {
+        canvas: [
+          {
+            type: "line",
+            x1: 0,
+            y1: 0,
+            x2: 515,
+            y2: 0,
+            lineWidth: 1.5,
+            lineColor: COR_PRIMARIA,
+          },
+        ],
+        margin: [0, 0, 0, 16],
+      },
+
+      // ── INFORMAÇÕES: cliente / veículo / validade / status ──
+      {
+        columns: [
+          // Cliente
+          {
+            width: "*",
+            stack: [
+              {
+                text: "CLIENTE",
+                fontSize: 7,
+                bold: true,
+                color: COR_PRIMARIA,
+                margin: [0, 0, 0, 2],
+              },
+              {
+                text: (cliente.nome || "—").toUpperCase(),
+                bold: true,
+                fontSize: 10,
+                color: TEXTO,
+              },
+              {
+                text: cliente.telefone || "",
+                fontSize: 8,
+                color: TEXTO_MEDIO,
+                margin: [0, 1, 0, 0],
+              },
+            ],
+          },
+          // Veículo
+          {
+            width: "*",
+            stack: [
+              {
+                text: "VEÍCULO",
+                fontSize: 7,
+                bold: true,
+                color: COR_PRIMARIA,
+                margin: [0, 0, 0, 2],
+              },
+              {
+                text: linhaVeiculo || "—",
+                fontSize: 9,
+                color: TEXTO,
+              },
+            ],
+          },
+          // Validade
+          {
+            width: "auto",
+            stack: [
+              {
+                text: "VALIDADE",
+                fontSize: 7,
+                bold: true,
+                color: COR_PRIMARIA,
+                margin: [0, 0, 0, 2],
+              },
+              {
+                text: `Emitido: ${dataEmissao}`,
+                fontSize: 8,
+                color: TEXTO_MEDIO,
+              },
+              {
+                text: `Válido até: ${validoAteTxt}`,
+                fontSize: 8,
+                bold: true,
+                color: TEXTO,
+              },
+            ],
+          },
+          // Status
+          {
+            width: "auto",
+            stack: [
+              {
+                text: "STATUS",
+                fontSize: 7,
+                bold: true,
+                color: COR_PRIMARIA,
+                margin: [0, 0, 0, 2],
+              },
+              {
+                text: textoStatus,
+                bold: true,
+                fontSize: 10,
+                color: corSelo,
+              },
+            ],
+          },
+        ],
+        columnGap: 15,
+        margin: [0, 0, 0, 18],
+      },
+
+      // ── TABELA DE ITENS (limpa, com linhas sutis) ──
       {
         table: {
           headerRows: 1,
-          widths: ["*", "12%", "9%", "18%", "18%"],
+          widths: ["*", "12%", "10%", "18%", "18%"],
           body: [
+            // Cabeçalho
             [
               {
                 text: "DESCRIÇÃO",
                 bold: true,
-                fontSize: 8,
-                color: BRANCO,
-                fillColor: GRAFITE,
+                fontSize: 7,
+                color: COR_PRIMARIA,
+                fillColor: COR_BAIXA,
               },
               {
                 text: "TIPO",
                 bold: true,
-                fontSize: 8,
-                color: BRANCO,
-                fillColor: LARANJA,
+                fontSize: 7,
+                color: COR_PRIMARIA,
+                fillColor: COR_BAIXA,
                 alignment: "center",
               },
               {
                 text: "QTD",
                 bold: true,
-                fontSize: 8,
-                color: BRANCO,
-                fillColor: LARANJA,
+                fontSize: 7,
+                color: COR_PRIMARIA,
+                fillColor: COR_BAIXA,
                 alignment: "center",
               },
               {
                 text: "VALOR UNIT.",
                 bold: true,
-                fontSize: 8,
-                color: BRANCO,
-                fillColor: LARANJA,
+                fontSize: 7,
+                color: COR_PRIMARIA,
+                fillColor: COR_BAIXA,
                 alignment: "right",
               },
               {
                 text: "TOTAL",
                 bold: true,
-                fontSize: 8,
-                color: BRANCO,
-                fillColor: LARANJA,
+                fontSize: 7,
+                color: COR_PRIMARIA,
+                fillColor: COR_BAIXA,
                 alignment: "right",
               },
             ],
-            ...itensCalc.map((item, i) => linhaItem(item, i)),
+            // Itens
+            ...itensCalc.map((item, i) => [
+              {
+                text: item.descricao,
+                fontSize: 9,
+                color: TEXTO,
+                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+              },
+              {
+                text: item.tipo === "peca" ? "Peça" : "Serviço",
+                fontSize: 8,
+                color: TEXTO_MEDIO,
+                alignment: "center",
+                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+              },
+              {
+                text: String(Number(item.quantidade)),
+                fontSize: 9,
+                color: TEXTO_MEDIO,
+                alignment: "center",
+                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+              },
+              {
+                text: formatarMoeda(item.valor_unitario),
+                fontSize: 9,
+                color: TEXTO_MEDIO,
+                alignment: "right",
+                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+              },
+              {
+                text: formatarMoeda(item.total),
+                fontSize: 9,
+                bold: true,
+                color: TEXTO,
+                alignment: "right",
+                fillColor: i % 2 ? BRANCO : COR_FUNDO,
+              },
+            ]),
           ],
         },
         layout: {
-          hLineWidth: () => 0,
+          hLineWidth: (i) => (i === 0 || i === 1 ? 0.5 : 0.3),
           vLineWidth: () => 0,
-          paddingTop: () => 7,
-          paddingBottom: () => 7,
-          paddingLeft: () => 8,
-          paddingRight: () => 8,
+          hLineColor: () => "#e2e8f0",
+          paddingTop: () => 8,
+          paddingBottom: () => 8,
+          paddingLeft: () => 10,
+          paddingRight: () => 10,
         },
-        margin: [0, 0, 0, 10],
+        margin: [0, 0, 0, 14],
       },
 
-      // ===== Subtotais =====
+      // ── TOTAIS (alinhado à direita, limpo) ──
       {
         columns: [
           { width: "*", text: "" },
           {
-            width: "46%",
+            width: "45%",
             table: {
               widths: ["*", "auto"],
               body: [
                 [
-                  { text: "Peças", fontSize: 8, color: CINZA },
+                  { text: "Peças", fontSize: 9, color: TEXTO_MEDIO },
                   {
                     text: formatarMoeda(subtotalPecas),
-                    fontSize: 8,
-                    color: GRAFITE,
+                    fontSize: 9,
+                    color: TEXTO,
                     alignment: "right",
                   },
                 ],
                 [
-                  { text: "Mão de obra", fontSize: 8, color: CINZA },
+                  { text: "Mão de obra", fontSize: 9, color: TEXTO_MEDIO },
                   {
                     text: formatarMoeda(subtotalServicos),
-                    fontSize: 8,
-                    color: GRAFITE,
+                    fontSize: 9,
+                    color: TEXTO,
                     alignment: "right",
                   },
                 ],
                 [
-                  { text: "Subtotal", fontSize: 8, color: CINZA },
+                  {
+                    text: "",
+                    border: [false, true, false, false],
+                  },
+                  {
+                    text: "",
+                    border: [false, true, false, false],
+                  },
+                ],
+                [
+                  {
+                    text: "Subtotal",
+                    fontSize: 9,
+                    color: TEXTO_MEDIO,
+                  },
                   {
                     text: formatarMoeda(subtotal),
-                    fontSize: 8,
-                    color: GRAFITE,
+                    fontSize: 9,
+                    color: TEXTO,
                     alignment: "right",
                   },
                 ],
-                [
-                  { text: "Desconto", fontSize: 8, color: CINZA },
-                  {
-                    text: `− ${formatarMoeda(desconto)}`,
-                    fontSize: 8,
-                    color: "#16a34a",
-                    alignment: "right",
-                  },
-                ],
+                ...(desconto > 0
+                  ? [
+                      [
+                        {
+                          text: "Desconto",
+                          fontSize: 9,
+                          color: TEXTO_MEDIO,
+                        },
+                        {
+                          text: `− ${formatarMoeda(desconto)}`,
+                          fontSize: 9,
+                          color: VERDE,
+                          alignment: "right",
+                        },
+                      ],
+                    ]
+                  : []),
               ],
             },
             layout: semBorda,
           },
         ],
-        margin: [0, 0, 0, 6],
+        margin: [0, 0, 0, 8],
       },
 
-      // ===== Barra de TOTAL =====
+      // ── TOTAL GERAL (destaque elegante) ──
       {
-        table: {
-          widths: ["*", "auto"],
-          body: [
-            [
-              {
-                text: "TOTAL GERAL",
-                bold: true,
-                fontSize: 12,
-                color: BRANCO,
-                fillColor: GRAFITE,
-                margin: [6, 4, 6, 4],
-              },
-              {
-                text: formatarMoeda(total),
-                bold: true,
-                fontSize: 16,
-                color: LARANJA,
-                fillColor: GRAFITE,
-                alignment: "right",
-                margin: [6, 4, 6, 4],
-              },
-            ],
-          ],
-        },
-        layout: semBorda,
-        margin: [0, 0, 0, 12],
+        columns: [
+          { width: "*", text: "" },
+          {
+            width: "45%",
+            table: {
+              widths: ["*", "auto"],
+              body: [
+                [
+                  {
+                    text: "TOTAL",
+                    bold: true,
+                    fontSize: 11,
+                    color: COR_ESCURA,
+                  },
+                  {
+                    text: formatarMoeda(total),
+                    bold: true,
+                    fontSize: 16,
+                    color: COR_PRIMARIA,
+                    alignment: "right",
+                  },
+                ],
+              ],
+            },
+            layout: {
+              hLineWidth: () => 0,
+              vLineWidth: () => 0,
+              fillColor: () => COR_BAIXA,
+              paddingTop: () => 10,
+              paddingBottom: () => 10,
+              paddingLeft: () => 12,
+              paddingRight: () => 12,
+            },
+          },
+        ],
+        margin: [0, 0, 0, 16],
       },
 
-      // ===== Observações (só se houver) =====
+      // ── OBSERVAÇÕES (se houver) ──
       ...(orcamento.observacoes
         ? [
             {
@@ -472,36 +540,37 @@ export async function gerarPdfOrcamento(orcamento) {
                           text: "OBSERVAÇÕES",
                           fontSize: 7,
                           bold: true,
-                          color: LARANJA_ESCURO,
+                          color: COR_PRIMARIA,
+                          margin: [0, 0, 0, 3],
                         },
                         {
                           text: orcamento.observacoes,
                           fontSize: 9,
-                          color: GRAFITE,
-                          margin: [0, 3, 0, 0],
+                          color: TEXTO_MEDIO,
                         },
                       ],
-                      fillColor: CREME,
-                      margin: [6, 6, 6, 6],
+                      fillColor: COR_FUNDO,
+                      margin: [10, 8, 10, 8],
                     },
                   ],
                 ],
               },
               layout: semBorda,
-              margin: [0, 0, 0, 12],
+              margin: [0, 0, 0, 16],
             },
           ]
         : []),
 
-      // ===== Aceite + assinatura (colunas, sem tabela) =====
+      // ── ACEITE + ASSINATURA ──
       {
         columns: [
           {
+            width: "*",
             stack: [
               {
                 text: "Aprovo a execução dos serviços e peças acima, no valor total indicado.",
                 fontSize: 8,
-                color: CINZA,
+                color: TEXTO_MEDIO,
               },
               {
                 text:
@@ -509,38 +578,39 @@ export async function gerarPdfOrcamento(orcamento) {
                     ? `Aprovado • Protocolo ${protocolo || "—"}. Guarde este PDF como comprovante.`
                     : `Para aprovar, responda este PDF no WhatsApp da oficina informando o protocolo ${protocolo || "—"}.`,
                 fontSize: 7,
-                color: "#94a3b8",
-                margin: [0, 3, 0, 0],
+                color: TEXTO_BAIXA,
+                margin: [0, 2, 0, 0],
               },
               {
                 text: "Obrigado pela preferência!",
                 bold: true,
                 fontSize: 10,
-                color: LARANJA_ESCURO,
-                margin: [0, 8, 0, 0],
+                color: COR_PRIMARIA,
+                margin: [0, 10, 0, 0],
               },
             ],
           },
           {
+            width: "auto",
             stack: [
-              { text: "", margin: [0, 28, 0, 0] },
+              { text: "", margin: [0, 24, 0, 0] },
               {
                 canvas: [
                   {
                     type: "line",
                     x1: 0,
                     y1: 0,
-                    x2: 200,
+                    x2: 180,
                     y2: 0,
-                    lineWidth: 1,
-                    lineColor: BORDA,
+                    lineWidth: 0.8,
+                    lineColor: "#cbd5e1",
                   },
                 ],
               },
               {
                 text: `${oficina.nome}  •  ${cliente.nome || "cliente"}`,
                 fontSize: 7,
-                color: CINZA,
+                color: TEXTO_BAIXA,
                 alignment: "center",
                 margin: [0, 4, 0, 0],
               },
@@ -549,30 +619,28 @@ export async function gerarPdfOrcamento(orcamento) {
           },
         ],
         columnGap: 30,
-        margin: [0, 0, 0, 0],
       },
     ],
 
-    // ===== Rodapé (todas as páginas) =====
+    // ── RODAPÉ ──
     footer: (currentPage, pageCount) => ({
       margin: [40, 0, 40, 0],
       columns: [
         {
           text: `${oficina.nome}${oficina.cnpj ? ` • CNPJ: ${oficina.cnpj}` : ""} • Válido até ${validoAteTxt}`,
           fontSize: 7,
-          color: "#94a3b8",
+          color: TEXTO_BAIXA,
           alignment: "left",
         },
         {
           text: `Página ${currentPage} de ${pageCount}`,
           fontSize: 7,
-          color: "#94a3b8",
+          color: TEXTO_BAIXA,
           alignment: "right",
         },
       ],
     }),
   };
 
-  // Gera o documento e devolve o arquivo (Buffer)
   return pdfmake.createPdf(docDefinition).getBuffer();
 }
