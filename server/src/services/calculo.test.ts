@@ -12,7 +12,7 @@ import {
   calcularTotais,
   arredondarCentavos,
   totalLinha,
-} from "./calculo.js";
+} from "./calculo.ts";
 
 describe("calcularSubtotal (soma quantidade x valor de cada item)", () => {
   it("calcula corretamente: 1x120 + 2x45 = 210", () => {

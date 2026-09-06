@@ -7,14 +7,24 @@
 // O detalhe técnico vai só para o log do servidor (console.error).
 // ============================================================
 
-export function mensagemBanco(error, padrao = "Não foi possível completar a operação.") {
+interface ErroBanco {
+  code?: string;
+  message?: string;
+}
+
+export function mensagemBanco(
+  error: unknown,
+  padrao = "Não foi possível completar a operação.",
+): string {
   if (!error) return padrao;
 
-  // Log interno (não vaza para o usuário)
-  console.error("[banco]", error.code || "", error.message || error);
+  const e = error as ErroBanco;
 
-  const codigo = error.code || "";
-  const msg = error.message || "";
+  // Log interno (não vaza para o usuário)
+  console.error("[banco]", e.code || "", e.message || error);
+
+  const codigo = e.code || "";
+  const msg = e.message || "";
 
   // Linha não encontrada (PostgREST)
   if (codigo === "PGRST116") return "Registro não encontrado.";

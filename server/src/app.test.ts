@@ -7,17 +7,19 @@
 // ============================================================
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import request from "supertest";
-import { app } from "./app.js";
-import { supabase } from "./lib/supabase.js";
+import { app } from "./app.ts";
+import { supabase } from "./lib/supabase.ts";
 
 const USER_ID = "11111111-2222-3333-4444-555555555555";
 
 // Constrói um construtor de consulta falso (encadeável como o Supabase)
 // que devolve o resultado combinado e anota os filtros usados.
-function consultaFalsa(resultado, filtros) {
-  const q = {
+type FiltroUsado = [string, unknown];
+
+function consultaFalsa(resultado: any, filtros: FiltroUsado[]): any {
+  const q: any = {
     select: () => q,
-    eq: (col, val) => {
+    eq: (col: string, val: unknown) => {
       filtros.push([col, val]);
       return q;
     },
@@ -31,7 +33,8 @@ function consultaFalsa(resultado, filtros) {
     delete: () => q,
     single: async () => resultado,
     maybeSingle: async () => resultado,
-    then: (ok, nok) => Promise.resolve(resultado).then(ok, nok),
+    then: (ok: (v: any) => any, nok?: (e: any) => any) =>
+      Promise.resolve(resultado).then(ok, nok),
   };
   return q;
 }
@@ -41,7 +44,7 @@ beforeEach(() => {
   vi.spyOn(supabase.auth, "getUser").mockResolvedValue({
     data: { user: { id: USER_ID } },
     error: null,
-  });
+  } as any);
 });
 
 afterEach(() => {
@@ -70,7 +73,7 @@ describe("saúde e porteiro", () => {
 
 describe("clientes (isolamento por dono)", () => {
   it("lista só do dono (filtra user_id) em modo legado", async () => {
-    const filtros = [];
+    const filtros: FiltroUsado[] = [];
     vi.spyOn(supabase, "from").mockImplementation(() =>
       consultaFalsa(
         {
@@ -151,7 +154,7 @@ describe("veículos (1 cliente -> N veículos)", () => {
   });
 
   it("GET lista só do dono (filtra user_id)", async () => {
-    const filtros = [];
+    const filtros: FiltroUsado[] = [];
     vi.spyOn(supabase, "from").mockImplementation(() =>
       consultaFalsa(
         {
@@ -190,7 +193,7 @@ describe("veículos (1 cliente -> N veículos)", () => {
 
   it("POST com cliente de outro dono recusa (400)", async () => {
     // 1ª chamada (clientes): dono não achado; 2ª nem acontece
-    vi.spyOn(supabase, "from").mockImplementation((tabela) => {
+    vi.spyOn(supabase, "from").mockImplementation((tabela: string) => {
       if (tabela === "clientes") {
         return consultaFalsa({ data: null, error: null }, []);
       }
@@ -297,7 +300,7 @@ describe("catálogo (peças e serviços)", () => {
   });
 
   it("GET com page devolve objeto paginado do dono", async () => {
-    const filtros = [];
+    const filtros: FiltroUsado[] = [];
     vi.spyOn(supabase, "from").mockImplementation(() =>
       consultaFalsa(
         { data: [{ id: "c1", descricao: "Pastilha" }], error: null, count: 1 },

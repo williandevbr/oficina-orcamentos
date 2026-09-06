@@ -1,13 +1,14 @@
 import { Router } from "express";
-import { supabase } from "../lib/supabase.js";
-import { mensagemBanco } from "../lib/mensagensErro.js";
+import type { Request, Response, NextFunction } from "express";
+import { supabase } from "../lib/supabase.ts";
+import { mensagemBanco } from "../lib/mensagensErro.ts";
 import {
   filtrarCamposVeiculo,
   idValido,
   veiculoCriarSchema,
   veiculoAtualizarSchema,
   primeiraMensagemZod,
-} from "../services/validacao.js";
+} from "../services/validacao.ts";
 
 // ============================================================
 // Rotas da API de VEÍCULOS (1 cliente -> N veículos)
@@ -21,7 +22,10 @@ import {
 const router = Router();
 
 // Garante que o cliente é do usuário logado (trava troca de dono)
-async function clienteDoUsuario(clienteId, userId) {
+async function clienteDoUsuario(
+  clienteId: string,
+  userId: string,
+): Promise<{ erro?: string; ok?: true }> {
   const { data, error } = await supabase
     .from("clientes")
     .select("id")
@@ -35,7 +39,7 @@ async function clienteDoUsuario(clienteId, userId) {
 
 // 1. LISTAR veículos do usuário (opcional: só de um cliente)
 // ?search= filtra por veículo ou placa. ?cliente_id= filtra o dono.
-router.get("/", async (req, res, next) => {
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { cliente_id, search } = req.query || {};
     let query = supabase
@@ -67,7 +71,7 @@ router.get("/", async (req, res, next) => {
 });
 
 // 2. CRIAR (Create) - cadastra um veículo num cliente do usuário
-router.post("/", async (req, res, next) => {
+router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const corpo = req.body || {};
     const validado = veiculoCriarSchema.safeParse({
@@ -105,7 +109,7 @@ router.post("/", async (req, res, next) => {
 });
 
 // 3. ATUALIZAR (Update) - edita nome/placa (o cliente do veículo nunca muda)
-router.put("/:id", async (req, res, next) => {
+router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {
@@ -141,7 +145,7 @@ router.put("/:id", async (req, res, next) => {
 });
 
 // 4. APAGAR (Delete) - remove o veículo (orçamentos ficam sem veículo)
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {

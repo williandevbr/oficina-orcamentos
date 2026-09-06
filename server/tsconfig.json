@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    // Roda .ts direto no Node 22.18+ (sem build, sem dist)
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    // Imports com .ts explícito (o Node 22.18+ roda .ts direto, sem build)
+    "allowImportingTsExtensions": true,
+
+    // Segurança de tipos + trava sintaxe que o Node não roda direto
+    "strict": true,
+    "erasableSyntaxOnly": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "skipLibCheck": true,
+    "noEmit": true,
+    "checkJs": false,
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  },
+  // Só o código do servidor (scripts/ continua .mjs fora da checagem)
+  "include": ["src"]
+}

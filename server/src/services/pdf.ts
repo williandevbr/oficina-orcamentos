@@ -1,7 +1,7 @@
-import pdfmake from "pdfmake";
+import pdfmake from "../lib/pdf.ts";
 import { fileURLToPath } from "url";
 import path from "path";
-import { calcularTotais, totalLinha } from "./calculo.js";
+import { calcularTotais, totalLinha } from "./calculo.ts";
 
 // ============================================================
 // Geração do PDF de ORÇAMENTO
@@ -37,9 +37,8 @@ const TEXTO_LEVE = "#64748b";
 const TEXTO_BAIXO = "#94a3b8";
 const VERDE = "#16a34a";
 const BRANCO = "#ffffff";
-const LARANJA = "#f97316";
 
-function formatarMoeda(valor) {
+function formatarMoeda(valor: number | string): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -47,7 +46,7 @@ function formatarMoeda(valor) {
 }
 
 // Pontuação automática de documento (só se veio sem pontos)
-function pontuarDocumento(valor = "") {
+function pontuarDocumento(valor: string = ""): string {
   const d = String(valor).replace(/\D/g, "");
   if (d.length === 14) {
     return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
@@ -66,7 +65,7 @@ const oficinaPadrao = {
   cnpj: process.env.OFICINA_CNPJ || "",
 };
 
-const rotuloStatus = {
+const rotuloStatus: Record<string, string> = {
   rascunho: "Rascunho",
   enviado: "Enviado",
   aprovado: "Aprovado",
@@ -74,7 +73,7 @@ const rotuloStatus = {
   expirado: "Expirado",
 };
 
-const corStatus = {
+const corStatus: Record<string, string> = {
   rascunho: "#64748b",
   enviado: "#2563eb",
   aprovado: "#16a34a",
@@ -91,7 +90,7 @@ const semBorda = {
 // ASSINATURA DIGITAL AUTOMÁTICA
 // Gera uma "assinatura manuscrita" usando traços do pdfmake
 // ============================================================
-function gerarAssinatura(nomeProprietario) {
+function gerarAssinatura(nomeProprietario: string): any {
   const largura = 180;
   const altura = 40;
 
@@ -171,7 +170,42 @@ function gerarAssinatura(nomeProprietario) {
 // ============================================================
 // DOCUMENT DEFINITION
 // ============================================================
-export async function gerarPdfOrcamento(orcamento, loja = null) {
+// O que o PDF precisa (vem do banco; campos extras são ignorados)
+export interface OrcamentoPdf {
+  id?: string;
+  numero?: number;
+  status?: string;
+  desconto?: number;
+  validade_dias?: number;
+  observacoes?: string;
+  created_at?: string;
+  clientes?: {
+    nome?: string;
+    telefone?: string;
+    veiculo?: string;
+    placa?: string;
+  } | null;
+  veiculos?: { veiculo?: string; placa?: string } | null;
+  orcamento_itens?: Array<{
+    descricao: string;
+    tipo: string;
+    quantidade: number;
+    valor_unitario: number;
+    total?: number;
+  }>;
+}
+
+export interface LojaPdf {
+  nome_loja?: string;
+  telefone?: string;
+  endereco?: string;
+  cnpj?: string;
+}
+
+export async function gerarPdfOrcamento(
+  orcamento: OrcamentoPdf,
+  loja: LojaPdf | null = null,
+): Promise<Uint8Array> {
   const cliente = orcamento.clientes || {};
   const itens = orcamento.orcamento_itens || [];
 
@@ -184,9 +218,6 @@ export async function gerarPdfOrcamento(orcamento, loja = null) {
     cnpj: pontuarDocumento(l.cnpj || oficinaPadrao.cnpj),
   };
   const numero = String(orcamento.numero ?? "—").padStart(4, "0");
-  const dataEmissao = new Date(
-    orcamento.created_at || Date.now(),
-  ).toLocaleDateString("pt-BR");
 
   const validadeDias = Number(orcamento.validade_dias) || 7;
   const validoAte = new Date(orcamento.created_at || Date.now());
@@ -210,12 +241,12 @@ export async function gerarPdfOrcamento(orcamento, loja = null) {
       quantidade: item.quantidade,
       valor_unitario: item.valor_unitario,
     })),
-    orcamento.desconto,
+    orcamento.desconto ?? 0,
   );
 
-  const corSelo = corStatus[orcamento.status] || "#64748b";
+  const corSelo = corStatus[orcamento.status || ""] || "#64748b";
   const textoStatus = (
-    rotuloStatus[orcamento.status] ||
+    rotuloStatus[orcamento.status || ""] ||
     orcamento.status ||
     "—"
   ).toUpperCase();
@@ -245,7 +276,8 @@ export async function gerarPdfOrcamento(orcamento, loja = null) {
   const assinatura = gerarAssinatura(oficina.nome);
 
   // ============================================================
-  const docDefinition = {
+  // Molde livre do pdfmake (a lib não tem tipos; checado em teste)
+  const docDefinition: any = {
     pageSize: "A4",
     pageMargins: [30, 30, 30, 30],
     background: () => ({
@@ -431,7 +463,7 @@ export async function gerarPdfOrcamento(orcamento, loja = null) {
           ],
         },
         layout: {
-          hLineWidth: (i) => (i === 0 || i === 1 ? 0.5 : 0.2),
+          hLineWidth: (i: number) => (i === 0 || i === 1 ? 0.5 : 0.2),
           vLineWidth: () => 0,
           hLineColor: () => "#cbd5e1",
           paddingTop: () => 7,
@@ -576,7 +608,7 @@ export async function gerarPdfOrcamento(orcamento, loja = null) {
     // ============================================================
     // RODAPÉ
     // ============================================================
-    footer: (currentPage, pageCount) => ({
+    footer: (currentPage: number, pageCount: number) => ({
       margin: [30, 0, 30, 0],
       table: {
         widths: ["*", "auto"],

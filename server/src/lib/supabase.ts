@@ -23,7 +23,11 @@ if (!supabaseUrl || !supabaseKey) {
   process.exit(1);
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+// Congela em consts tipadas (o estreitamento do if não entra em closures)
+const URL: string = supabaseUrl;
+const KEY: string = supabaseKey;
+
+export const supabase = createClient(URL, KEY, {
   auth: { persistSession: false },
 });
 
@@ -32,9 +36,9 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 export const supabaseAdmin = supabase;
 
 // Cliente por usuário (respeita RLS): usa a chave anon + token do login.
-export function supabaseDoUsuario(token) {
-  const anonKey = process.env.SUPABASE_ANON_KEY || supabaseKey;
-  return createClient(supabaseUrl, anonKey, {
+export function supabaseDoUsuario(token: string) {
+  const anonKey = process.env.SUPABASE_ANON_KEY || KEY;
+  return createClient(URL, anonKey, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false },
   });

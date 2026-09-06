@@ -1,13 +1,14 @@
 import { Router } from "express";
-import { supabase } from "../lib/supabase.js";
-import { mensagemBanco } from "../lib/mensagensErro.js";
+import type { Request, Response, NextFunction } from "express";
+import { supabase } from "../lib/supabase.ts";
+import { mensagemBanco } from "../lib/mensagensErro.ts";
 import {
   filtrarCamposCliente,
   idValido,
   clienteCriarSchema,
   clienteAtualizarSchema,
   primeiraMensagemZod,
-} from "../services/validacao.js";
+} from "../services/validacao.ts";
 
 // ============================================================
 // Rotas da API de CLIENTES (CRUD completo)
@@ -25,7 +26,7 @@ const router = Router();
 // Busca também na tabela de veículos: quem tem a placa/veículo
 // digitado aparece (a pessoa é 1 só, mesmo com moto + carro).
 // Devolve ids de cliente para somar no filtro OU da busca.
-async function idsClientePorVeiculo(userId, termo) {
+async function idsClientePorVeiculo(userId: string, termo: string): Promise<string[]> {
   const { data } = await supabase
     .from("veiculos")
     .select("cliente_id")
@@ -36,7 +37,7 @@ async function idsClientePorVeiculo(userId, termo) {
 }
 
 // Monta o filtro OU da busca (colunas do cliente + donos dos veículos)
-function filtroBuscaCliente(termo, idsVeiculo) {
+function filtroBuscaCliente(termo: string, idsVeiculo: string[]): string {
   let filtro =
     `nome.ilike.%${termo}%,telefone.ilike.%${termo}%,email.ilike.%${termo}%,placa.ilike.%${termo}%,veiculo.ilike.%${termo}%,documento.ilike.%${termo}%`;
   if (idsVeiculo.length > 0) {
@@ -49,7 +50,7 @@ function filtroBuscaCliente(termo, idsVeiculo) {
 // Sem ?page -> devolve array (compatível com o site atual).
 // Com ?page -> devolve { data, total, page, limit, totalPages }.
 // ?search= filtra por nome, telefone, email, placa, veículo e documento.
-router.get("/", async (req, res, next) => {
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit, search } = req.query || {};
 
@@ -76,8 +77,8 @@ router.get("/", async (req, res, next) => {
     }
 
     // Modo paginado
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 20));
     const from = (pageNum - 1) * limitNum;
     const to = from + limitNum - 1;
 
@@ -113,7 +114,7 @@ router.get("/", async (req, res, next) => {
 });
 
 // 2. CRIAR (Create) - cadastra um cliente novo
-router.post("/", async (req, res, next) => {
+router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const campos = filtrarCamposCliente(req.body || {});
     const validado = clienteCriarSchema.safeParse(campos);
@@ -148,7 +149,7 @@ router.post("/", async (req, res, next) => {
 });
 
 // 3. ATUALIZAR (Update) - edita um cliente existente
-router.put("/:id", async (req, res, next) => {
+router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {
@@ -185,7 +186,7 @@ router.put("/:id", async (req, res, next) => {
 });
 
 // 4. APAGAR (Delete) - remove um cliente
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {

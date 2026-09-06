@@ -2,7 +2,7 @@
 // Teste de fumaça do PDF: gera de verdade e confere o arquivo
 // ============================================================
 import { describe, it, expect } from "vitest";
-import { gerarPdfOrcamento } from "./pdf.js";
+import { gerarPdfOrcamento } from "./pdf.ts";
 
 const orcamentoExemplo = {
   id: "11111111-2222-3333-4444-555555555555",
