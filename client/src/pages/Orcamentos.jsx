@@ -211,6 +211,12 @@ export default function Orcamentos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Vindo do Dashboard ("Cobrar vencidos"): filtra por validade via URL
+  const [alerta, setAlerta] = useState(() => {
+    const p = new URLSearchParams(location.search).get("alerta");
+    return p === "vencidos" || p === "vencendo" ? p : null;
+  });
+
   // Debounce da busca (300ms) + volta para a página 1
   useEffect(() => {
     const t = setTimeout(() => {
@@ -229,7 +235,7 @@ export default function Orcamentos() {
     carregarTudo(controle.signal);
     return () => controle.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagina, buscaDebounced, filtroStatus]);
+  }, [pagina, buscaDebounced, filtroStatus, alerta]);
 
   const inicio = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
   const fim = Math.min(pagina * POR_PAGINA, total);
@@ -240,7 +246,7 @@ export default function Orcamentos() {
       const statusParam =
         filtroStatus !== "todos" ? `&status=${filtroStatus}` : "";
 
-      if (!buscaDebounced) {
+      if (!buscaDebounced && !alerta) {
         // Modo paginado no servidor
         const [respOrc, respCli, respCat] = await Promise.all([
           apiFetch(`${API}?page=${pagina}&limit=${POR_PAGINA}${statusParam}`, {
@@ -296,12 +302,30 @@ export default function Orcamentos() {
         }
         const lista = Array.isArray(dadosOrc) ? dadosOrc : dadosOrc.data || [];
         const termo = buscaDebounced.toLowerCase();
-        const filtrada = lista.filter((orc) =>
-          [String(orc.numero), orc.clientes?.nome, orc.clientes?.placa]
-            .join(" ")
-            .toLowerCase()
-            .includes(termo),
-        );
+        const agora = new Date();
+        const limiteVencendo = new Date();
+        limiteVencendo.setDate(limiteVencendo.getDate() + 3);
+        const filtrada = lista.filter((orc) => {
+          if (
+            buscaDebounced &&
+            ![String(orc.numero), orc.clientes?.nome, orc.clientes?.placa]
+              .join(" ")
+              .toLowerCase()
+              .includes(termo)
+          ) {
+            return false;
+          }
+          // Filtro de validade vindo do Dashboard (?alerta=)
+          if (alerta) {
+            if (orc.status !== "rascunho" && orc.status !== "enviado") return false;
+            const ate = calcularValidoAte(orc.created_at, orc.validade_dias);
+            if (!ate) return false;
+            if (alerta === "vencidos" && ate >= agora) return false;
+            if (alerta === "vencendo" && (ate < agora || ate > limiteVencendo))
+              return false;
+          }
+          return true;
+        });
         const totPag = Math.max(1, Math.ceil(filtrada.length / POR_PAGINA));
         const pagSegura = Math.min(pagina, totPag);
         setOrcamentos(
@@ -323,6 +347,11 @@ export default function Orcamentos() {
     } finally {
       if (!sinal?.aborted) setCarregando(false);
     }
+  }
+
+  function limparAlerta() {
+    setAlerta(null);
+    navigate(location.pathname, { replace: true });
   }
 
   function abrirNovo() {
@@ -440,7 +469,8 @@ export default function Orcamentos() {
     }
   }
 
-  const mostrandoBusca = buscaDebounced !== "" || filtroStatus !== "todos";
+  const mostrandoBusca =
+    buscaDebounced !== "" || filtroStatus !== "todos" || alerta !== null;
 
   return (
     <div>
@@ -512,6 +542,23 @@ export default function Orcamentos() {
           ))}
         </select>
       </div>
+
+      {/* Filtro de validade vindo do Dashboard */}
+      {alerta && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+            {alerta === "vencidos" ? "Vencidos" : "Vencendo em até 3 dias"}
+            <button
+              type="button"
+              onClick={limparAlerta}
+              aria-label="Limpar filtro de validade"
+              className="rounded-full p-0.5 hover:bg-amber-200"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        </div>
+      )}
 
       {/* Lista */}
       {carregando ? (
