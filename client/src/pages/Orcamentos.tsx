@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import OrcamentoForm from "../components/OrcamentoForm";
+import type { PayloadOrcamento } from "../components/OrcamentoForm";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Paginacao from "../components/Paginacao";
 import { SkeletonTabela } from "../components/Skeleton";
@@ -21,7 +22,15 @@ import {
   montarLinkWhatsApp,
   calcularValidoAte,
 } from "../utils/mascaras";
+import { mensagemErroRede } from "../utils/erros";
 import { apiFetch } from "../lib/api";
+import type {
+  CatalogoItem,
+  Cliente,
+  Orcamento,
+  StatusOrcamento,
+  Veiculo,
+} from "../types";
 
 // ============================================================
 // Página de ORÇAMENTOS
@@ -38,7 +47,7 @@ const API_VEICULOS = "/api/veiculos";
 const API_CATALOGO = "/api/catalogo";
 const POR_PAGINA = 8;
 
-const STATUS_OPCOES = [
+const STATUS_OPCOES: { valor: string; rotulo: string }[] = [
   { valor: "todos", rotulo: "Todos os status" },
   { valor: "rascunho", rotulo: "Rascunho" },
   { valor: "enviado", rotulo: "Enviado" },
@@ -47,16 +56,18 @@ const STATUS_OPCOES = [
   { valor: "expirado", rotulo: "Expirado" },
 ];
 
+type AlertaValidade = "vencidos" | "vencendo" | null;
+
 // Cores do selo (badge) de status
-function BadgeStatus({ status }) {
-  const cores = {
+function BadgeStatus({ status }: { status: StatusOrcamento }) {
+  const cores: Record<string, string> = {
     rascunho: "bg-slate-100 text-slate-600",
     enviado: "bg-blue-100 text-blue-700",
     aprovado: "bg-emerald-100 text-emerald-700",
     recusado: "bg-red-100 text-red-700",
     expirado: "bg-amber-100 text-amber-700",
   };
-  const rotulos = {
+  const rotulos: Record<string, string> = {
     rascunho: "Rascunho",
     enviado: "Enviado",
     aprovado: "Aprovado",
@@ -73,7 +84,21 @@ function BadgeStatus({ status }) {
 }
 
 // Uma linha da tabela (memoizada: evita recalcular link/validade à toa)
-function LinhaOrcamento({ orc, baixando, editando, onBaixar, onEditar, onExcluir }) {
+function LinhaOrcamento({
+  orc,
+  baixando,
+  editando,
+  onBaixar,
+  onEditar,
+  onExcluir,
+}: {
+  orc: Orcamento;
+  baixando: boolean;
+  editando: boolean;
+  onBaixar: (orc: Orcamento) => void;
+  onEditar: (id: string) => void;
+  onExcluir: (id: string) => void;
+}) {
   const linha = useMemo(() => {
     const validoAte = calcularValidoAte(orc.created_at, orc.validade_dias);
     const linkZap = montarLinkWhatsApp({
@@ -111,7 +136,7 @@ function LinhaOrcamento({ orc, baixando, editando, onBaixar, onEditar, onExcluir
         <div>{formatarData(orc.created_at)}</div>
         {linha.validoAte && (
           <div className="text-xs text-slate-400">
-            Válido até {formatarData(linha.validoAte)}
+            Válido até {formatarData(linha.validoAte.toISOString())}
           </div>
         )}
       </td>
@@ -172,7 +197,7 @@ function LinhaOrcamento({ orc, baixando, editando, onBaixar, onEditar, onExcluir
   );
 }
 
-async function lerJsonSeguro(resp) {
+async function lerJsonSeguro(resp: Response): Promise<any> {
   try {
     return await resp.json();
   } catch {
@@ -181,27 +206,27 @@ async function lerJsonSeguro(resp) {
 }
 
 export default function Orcamentos() {
-  const [orcamentos, setOrcamentos] = useState([]);
+  const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(1);
-  const [clientes, setClientes] = useState([]);
-  const [veiculos, setVeiculos] = useState([]);
-  const [catalogo, setCatalogo] = useState([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+  const [catalogo, setCatalogo] = useState<CatalogoItem[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
   const [modalAberto, setModalAberto] = useState(false);
-  const [dadosEdicao, setDadosEdicao] = useState(null); // null = novo
+  const [dadosEdicao, setDadosEdicao] = useState<Orcamento | null>(null); // null = novo
   const [erroForm, setErroForm] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const [editandoId, setEditandoId] = useState(null);
-  const [baixandoId, setBaixandoId] = useState(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [baixandoId, setBaixandoId] = useState<string | null>(null);
 
   const [busca, setBusca] = useState("");
   const [buscaDebounced, setBuscaDebounced] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [pagina, setPagina] = useState(1);
-  const [idParaExcluir, setIdParaExcluir] = useState(null);
+  const [idParaExcluir, setIdParaExcluir] = useState<string | null>(null);
   const [excluindo, setExcluindo] = useState(false);
 
   const location = useLocation();
@@ -209,7 +234,7 @@ export default function Orcamentos() {
 
   // Vindo do Dashboard ("Novo orçamento"): abre o modal direto
   useEffect(() => {
-    if (location.state?.novo) {
+    if ((location.state as { novo?: boolean } | null)?.novo) {
       abrirNovo();
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -217,7 +242,7 @@ export default function Orcamentos() {
   }, []);
 
   // Vindo do Dashboard ("Cobrar vencidos"): filtra por validade via URL
-  const [alerta, setAlerta] = useState(() => {
+  const [alerta, setAlerta] = useState<AlertaValidade>(() => {
     const p = new URLSearchParams(location.search).get("alerta");
     return p === "vencidos" || p === "vencendo" ? p : null;
   });
@@ -245,7 +270,7 @@ export default function Orcamentos() {
   const inicio = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
   const fim = Math.min(pagina * POR_PAGINA, total);
 
-  async function carregarTudo(sinal) {
+  async function carregarTudo(sinal?: AbortSignal) {
     try {
       setCarregando(true);
       const statusParam =
@@ -310,7 +335,7 @@ export default function Orcamentos() {
         if (!respOrc.ok) {
           throw new Error(dadosOrc.message || "Não foi possível carregar os orçamentos.");
         }
-        const lista = Array.isArray(dadosOrc) ? dadosOrc : dadosOrc.data || [];
+        const lista: Orcamento[] = Array.isArray(dadosOrc) ? dadosOrc : dadosOrc.data || [];
         const termo = buscaDebounced.toLowerCase();
         const agora = new Date();
         const limiteVencendo = new Date();
@@ -355,12 +380,9 @@ export default function Orcamentos() {
       }
       setErro("");
     } catch (e) {
-      if (e?.name === "AbortError" || sinal?.aborted) return;
-      if (e?.name === "TimeoutError") {
-        setErro("O servidor demorou a responder. Tente novamente.");
-      } else {
-        setErro(e.message || "Não foi possível carregar os orçamentos.");
-      }
+      if (sinal?.aborted) return;
+      const msg = mensagemErroRede(e, "Não foi possível carregar os orçamentos.");
+      if (msg !== null) setErro(msg);
     } finally {
       if (!sinal?.aborted) setCarregando(false);
     }
@@ -383,7 +405,7 @@ export default function Orcamentos() {
   }
 
   // Para editar, busca o orçamento completo (com os itens)
-  async function abrirEdicao(id) {
+  async function abrirEdicao(id: string) {
     try {
       setEditandoId(id);
       const resp = await apiFetch(`${API}/${id}`);
@@ -402,7 +424,7 @@ export default function Orcamentos() {
     }
   }
 
-  async function salvar(payload) {
+  async function salvar(payload: PayloadOrcamento) {
     const url = dadosEdicao ? `${API}/${dadosEdicao.id}` : API;
     const metodo = dadosEdicao ? "PUT" : "POST";
 
@@ -431,7 +453,7 @@ export default function Orcamentos() {
     }
   }
 
-  function pedirExclusao(id) {
+  function pedirExclusao(id: string) {
     setIdParaExcluir(id);
   }
 
@@ -452,14 +474,15 @@ export default function Orcamentos() {
         await carregarTudo();
       }
     } catch (e) {
-      toast.error(e.message || "Não foi possível excluir.");
+      const msg = mensagemErroRede(e, "Não foi possível excluir.");
+      if (msg !== null) toast.error(msg);
     } finally {
       setExcluindo(false);
     }
   }
 
   // Baixa o PDF com autorização (o navegador sozinho não envia o crachá)
-  async function baixarPdf(orc) {
+  async function baixarPdf(orc: Orcamento) {
     if (baixandoId) return; // evita duplo clique
     try {
       setBaixandoId(orc.id);

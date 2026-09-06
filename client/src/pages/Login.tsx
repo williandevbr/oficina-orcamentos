@@ -23,15 +23,18 @@ import { useAuth } from "../contexts/AuthContext";
 const abas = [
   { id: "entrar", label: "Entrar", icon: LogIn },
   { id: "cadastrar", label: "Criar conta", icon: UserPlus },
-];
+] as const;
+
+type AbaId = (typeof abas)[number]["id"];
 
 export default function Login() {
   const { usuario, carregandoSessao, entrar, cadastrar, recuperarSenha } =
     useAuth();
   const location = useLocation();
-  const destino = location.state?.from || "/";
+  const destino =
+    (location.state as { from?: string } | null)?.from || "/";
 
-  const [aba, setAba] = useState("entrar");
+  const [aba, setAba] = useState<AbaId>("entrar");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -44,8 +47,8 @@ export default function Login() {
     return <Navigate to={destino} replace />;
   }
 
-  async function aoEnviar(evento) {
-    evento.preventDefault();
+  async function aoEnviar(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setMsgErro("");
     setMsgOk("");
     setOcupado(true);
@@ -65,7 +68,7 @@ export default function Login() {
         }
       }
     } catch (erro) {
-      setMsgErro(erro.message);
+      setMsgErro(erro instanceof Error ? erro.message : "Não foi possível continuar.");
     } finally {
       setOcupado(false);
     }
@@ -83,7 +86,7 @@ export default function Login() {
       await recuperarSenha(email.trim());
       setMsgOk("Enviamos um link de recuperação para o seu e-mail.");
     } catch (erro) {
-      setMsgErro(erro.message);
+      setMsgErro(erro instanceof Error ? erro.message : "Não foi possível continuar.");
     } finally {
       setOcupado(false);
     }

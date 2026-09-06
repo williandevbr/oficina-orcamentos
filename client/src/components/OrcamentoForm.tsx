@@ -58,6 +58,17 @@ type CampoForm =
 
 type CampoItem = "tipo" | "descricao" | "quantidade" | "valor_unitario";
 
+// Payload montado ao salvar (o que viaja para POST/PUT /api/orcamentos)
+export interface PayloadOrcamento {
+  cliente_id: string;
+  veiculo_id: string | null;
+  status: StatusOrcamento;
+  desconto: number;
+  observacoes: string;
+  validade_dias: number;
+  itens: OrcamentoItem[];
+}
+
 const itemVazio: ItemLinha = {
   descricao: "",
   tipo: "servico",
@@ -86,15 +97,7 @@ export default function OrcamentoForm({
   dadosIniciais?: Orcamento | null;
   erro?: string;
   salvando?: boolean;
-  onSalvar: (payload: {
-    cliente_id: string;
-    veiculo_id: string | null;
-    status: StatusOrcamento;
-    desconto: number;
-    observacoes: string;
-    validade_dias: number;
-    itens: OrcamentoItem[];
-  }) => void;
+  onSalvar: (payload: PayloadOrcamento) => void;
   onFechar: () => void;
 }) {
   // Fecha com Escape

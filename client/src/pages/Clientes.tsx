@@ -8,7 +8,9 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import Paginacao from "../components/Paginacao";
 import { SkeletonTabela } from "../components/Skeleton";
 import { mascararTelefone, mascararDocumento } from "../utils/mascaras";
+import { mensagemErroRede } from "../utils/erros";
 import { apiFetch } from "../lib/api";
+import type { Cliente, Veiculo } from "../types";
 
 // ============================================================
 // Página de Clientes - CRUD completo (busca e paginação no servidor)
@@ -19,8 +21,19 @@ const API = "/api/clientes";
 const API_VEICULOS = "/api/veiculos";
 const POR_PAGINA = 8;
 
+// Campos do formulário do cliente (type com índice implícito,
+// compatível com o Record<string, string> do ClienteForm)
+type FormCliente = {
+  nome: string;
+  telefone: string;
+  email: string;
+  documento: string;
+  endereco: string;
+  observacoes: string;
+};
+
 // Fábrica: cada "novo" ganha um objeto próprio (sem referência compartilhada)
-function criarFormVazio() {
+function criarFormVazio(): FormCliente {
   return {
     nome: "",
     telefone: "",
@@ -32,7 +45,7 @@ function criarFormVazio() {
 }
 
 // Só os campos do formulário (nunca id/created_at/user_id)
-function extrairForm(cliente = {}) {
+function extrairForm(cliente: Cliente = {} as Cliente): FormCliente {
   return {
     nome: cliente.nome || "",
     telefone: cliente.telefone || "",
@@ -43,7 +56,7 @@ function extrairForm(cliente = {}) {
   };
 }
 
-async function lerJsonSeguro(resp) {
+async function lerJsonSeguro(resp: Response): Promise<any> {
   try {
     return await resp.json();
   } catch {
@@ -52,27 +65,27 @@ async function lerJsonSeguro(resp) {
 }
 
 export default function Clientes() {
-  const [clientes, setClientes] = useState([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
   const [modalAberto, setModalAberto] = useState(false);
-  const [editandoId, setEditandoId] = useState(null);
-  const [form, setForm] = useState(criarFormVazio);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormCliente>(criarFormVazio);
   const [erroForm, setErroForm] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const [busca, setBusca] = useState("");
   const [buscaDebounced, setBuscaDebounced] = useState("");
   const [pagina, setPagina] = useState(1);
-  const [idParaExcluir, setIdParaExcluir] = useState(null);
+  const [idParaExcluir, setIdParaExcluir] = useState<string | null>(null);
   const [excluindo, setExcluindo] = useState(false);
 
   // Veículos: todos carregados uma vez (1 cliente -> N veículos)
-  const [veiculos, setVeiculos] = useState([]);
-  const [veiculosDe, setVeiculosDe] = useState(null); // cliente com modal aberto
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+  const [veiculosDe, setVeiculosDe] = useState<Cliente | null>(null); // cliente com modal aberto
   const [erroVeiculo, setErroVeiculo] = useState("");
   const [salvandoVeiculo, setSalvandoVeiculo] = useState(false);
 
@@ -81,7 +94,7 @@ export default function Clientes() {
 
   // Vindo do Dashboard ("Novo cliente"): abre o modal direto
   useEffect(() => {
-    if (location.state?.novo) {
+    if ((location.state as { novo?: boolean } | null)?.novo) {
       abrirNovo();
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -114,7 +127,7 @@ export default function Clientes() {
   const inicio = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
   const fim = Math.min(pagina * POR_PAGINA, total);
 
-  async function carregarClientes(sinal) {
+  async function carregarClientes(sinal?: AbortSignal) {
     try {
       setCarregando(true);
       const params = new URLSearchParams({
@@ -141,12 +154,9 @@ export default function Clientes() {
       }
       setErro("");
     } catch (e) {
-      if (e?.name === "AbortError" || sinal?.aborted) return;
-      if (e?.name === "TimeoutError") {
-        setErro("O servidor demorou a responder. Tente novamente.");
-      } else {
-        setErro(e.message || "Não foi possível carregar os clientes.");
-      }
+      if (sinal?.aborted) return;
+      const msg = mensagemErroRede(e, "Não foi possível carregar os clientes.");
+      if (msg !== null) setErro(msg);
     } finally {
       if (!sinal?.aborted) setCarregando(false);
     }
@@ -159,7 +169,7 @@ export default function Clientes() {
     setModalAberto(true);
   }
 
-  function abrirEdicao(cliente) {
+  function abrirEdicao(cliente: Cliente) {
     setForm(extrairForm(cliente));
     setEditandoId(cliente.id);
     setErroForm("");
@@ -170,76 +180,24 @@ export default function Clientes() {
     setModalAberto(false);
   }
 
-  function aoMudarForm(campo, valor) {
-    let final = valor;
-    if (campo === "telefone") final = mascararTelefone(valor);
-    if (campo === "documento") final = mascararDocumento(valor);
-    setForm((atual) => ({ ...atual, [campo]: final }));
-  }
-
-  // Mapa cliente_id -> lista de veículos (para a coluna da tabela)
-  const veiculosDoCliente = (clienteId) =>
-    veiculos.filter((v) => v.cliente_id === clienteId);
-
-  async function carregarVeiculos() {
-    try {
-      const resp = await apiFetch(API_VEICULOS);
-      const dados = await lerJsonSeguro(resp);
-      if (!resp.ok) return; // tabela nova pode não existir ainda: segue sem travar
-      setVeiculos(Array.isArray(dados) ? dados : dados.data || []);
-    } catch {
-      // Sem veículos por enquanto (offline ou migration pendente)
+  function aoMudarForm(campo: string, valor: string) {
+    if (campo === "telefone") {
+      setForm((atual) => ({ ...atual, telefone: mascararTelefone(valor) }));
+    } else if (campo === "documento") {
+      setForm((atual) => ({ ...atual, documento: mascararDocumento(valor) }));
+    } else if (campo === "nome") {
+      setForm((atual) => ({ ...atual, nome: valor }));
+    } else if (campo === "email") {
+      setForm((atual) => ({ ...atual, email: valor }));
+    } else if (campo === "endereco") {
+      setForm((atual) => ({ ...atual, endereco: valor }));
+    } else if (campo === "observacoes") {
+      setForm((atual) => ({ ...atual, observacoes: valor }));
     }
   }
 
-  async function adicionarVeiculo({ veiculo, placa }) {
-    if (!veiculosDe) return;
-    try {
-      setSalvandoVeiculo(true);
-      setErroVeiculo("");
-      const resp = await apiFetch(API_VEICULOS, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cliente_id: veiculosDe.id,
-          veiculo,
-          placa: placa || undefined,
-        }),
-      });
-      const dados = await lerJsonSeguro(resp);
-      if (!resp.ok) {
-        setErroVeiculo(dados.message || "Erro ao salvar o veículo.");
-        return;
-      }
-      setVeiculos((atual) => [dados, ...atual]);
-      toast.success("Veículo adicionado!");
-    } catch {
-      setErroVeiculo("Erro de conexão com o servidor.");
-    } finally {
-      setSalvandoVeiculo(false);
-    }
-  }
-
-  async function excluirVeiculo(id) {
-    try {
-      setSalvandoVeiculo(true);
-      setErroVeiculo("");
-      const resp = await apiFetch(`${API_VEICULOS}/${id}`, {
-        method: "DELETE",
-      });
-      const dados = await lerJsonSeguro(resp);
-      if (!resp.ok) throw new Error(dados.message || "Não foi possível excluir.");
-      setVeiculos((atual) => atual.filter((v) => v.id !== id));
-      toast.success("Veículo removido!");
-    } catch (e) {
-      setErroVeiculo(e.message || "Não foi possível excluir.");
-    } finally {
-      setSalvandoVeiculo(false);
-    }
-  }
-
-  async function salvar(evento) {
-    evento.preventDefault();
+  async function salvar(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
     const url = editandoId ? `${API}/${editandoId}` : API;
     const metodo = editandoId ? "PUT" : "POST";
@@ -269,7 +227,7 @@ export default function Clientes() {
     }
   }
 
-  function pedirExclusao(id) {
+  function pedirExclusao(id: string) {
     setIdParaExcluir(id);
   }
 
@@ -291,9 +249,72 @@ export default function Clientes() {
         await carregarClientes();
       }
     } catch (e) {
-      toast.error(e.message || "Não foi possível excluir.");
+      const msg = mensagemErroRede(e, "Não foi possível excluir.");
+      if (msg !== null) toast.error(msg);
     } finally {
       setExcluindo(false);
+    }
+  }
+
+  // Mapa cliente_id -> lista de veículos (para a coluna da tabela)
+  const veiculosDoCliente = (clienteId: string): Veiculo[] =>
+    veiculos.filter((v) => v.cliente_id === clienteId);
+
+  async function carregarVeiculos() {
+    try {
+      const resp = await apiFetch(API_VEICULOS);
+      const dados = await lerJsonSeguro(resp);
+      if (!resp.ok) return; // tabela nova pode não existir ainda: segue sem travar
+      setVeiculos(Array.isArray(dados) ? dados : dados.data || []);
+    } catch {
+      // Sem veículos por enquanto (offline ou migration pendente)
+    }
+  }
+
+  async function adicionarVeiculo({ veiculo, placa }: { veiculo: string; placa: string }) {
+    if (!veiculosDe) return;
+    try {
+      setSalvandoVeiculo(true);
+      setErroVeiculo("");
+      const resp = await apiFetch(API_VEICULOS, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cliente_id: veiculosDe.id,
+          veiculo,
+          placa: placa || undefined,
+        }),
+      });
+      const dados = await lerJsonSeguro(resp);
+      if (!resp.ok) {
+        setErroVeiculo(dados.message || "Erro ao salvar o veículo.");
+        return;
+      }
+      setVeiculos((atual) => [dados, ...atual]);
+      toast.success("Veículo adicionado!");
+    } catch {
+      setErroVeiculo("Erro de conexão com o servidor.");
+    } finally {
+      setSalvandoVeiculo(false);
+    }
+  }
+
+  async function excluirVeiculo(id: string) {
+    try {
+      setSalvandoVeiculo(true);
+      setErroVeiculo("");
+      const resp = await apiFetch(`${API_VEICULOS}/${id}`, {
+        method: "DELETE",
+      });
+      const dados = await lerJsonSeguro(resp);
+      if (!resp.ok) throw new Error(dados.message || "Não foi possível excluir.");
+      setVeiculos((atual) => atual.filter((v) => v.id !== id));
+      toast.success("Veículo removido!");
+    } catch (e) {
+      const msg = mensagemErroRede(e, "Não foi possível excluir.");
+      if (msg !== null) setErroVeiculo(msg);
+    } finally {
+      setSalvandoVeiculo(false);
     }
   }
 

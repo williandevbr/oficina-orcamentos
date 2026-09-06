@@ -12,14 +12,14 @@ import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import ExigirLogin from "./components/ExigirLogin";
 import Sidebar from "./components/Sidebar";
-import Login from "./pages/Login.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
-import Clientes from "./pages/Clientes.jsx";
-import Orcamentos from "./pages/Orcamentos.jsx";
-import Catalogo from "./pages/Catalogo.jsx";
-import Perfil from "./pages/Perfil.jsx";
-import Configuracoes from "./pages/Configuracoes.jsx";
-import NotFound from "./pages/NotFound.jsx";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Clientes from "./pages/Clientes";
+import Orcamentos from "./pages/Orcamentos";
+import Catalogo from "./pages/Catalogo";
+import Perfil from "./pages/Perfil";
+import Configuracoes from "./pages/Configuracoes";
+import NotFound from "./pages/NotFound";
 import { apiFetch } from "./lib/api";
 
 // Estrutura das páginas internas (menu lateral + conteúdo).
@@ -30,7 +30,7 @@ function LayoutAutenticado() {
   const location = useLocation();
   const [menuAberto, setMenuAberto] = useState(false); // drawer (celular)
   const [recolhido, setRecolhido] = useState(false); // menu escondido (desktop)
-  const [perfilOk, setPerfilOk] = useState(null); // null = checando
+  const [perfilOk, setPerfilOk] = useState<boolean | null>(null); // null = checando
 
   // Onboarding: na primeira entrada (sem perfil) manda criar o perfil
   useEffect(() => {
@@ -44,7 +44,7 @@ function LayoutAutenticado() {
           setPerfilOk(false);
           return;
         }
-        const dados = await resp.json().catch(() => ({}));
+        const dados: { nome?: string } = await resp.json().catch(() => ({}));
         setPerfilOk(Boolean(dados?.nome));
       } catch {
         // Sem conexão: não trava o sistema (tenta de novo no próximo login)

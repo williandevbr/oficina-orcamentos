@@ -5,15 +5,17 @@ import StatsCard from "../components/StatsCard";
 import { SkeletonStats, Skeleton } from "../components/Skeleton";
 import { formatarMoeda, formatarData, formatarNumero } from "../utils/format";
 import { calcularValidoAte } from "../utils/mascaras";
+import { mensagemErroRede } from "../utils/erros";
 import { apiFetch } from "../lib/api";
+import type { Orcamento, StatusOrcamento } from "../types";
 
 // ============================================================
 // Página inicial: resumo da oficina com números REAIS do servidor
 // ============================================================
 
-const STATUS_LISTA = ["rascunho", "enviado", "aprovado", "recusado", "expirado"];
+const STATUS_LISTA: StatusOrcamento[] = ["rascunho", "enviado", "aprovado", "recusado", "expirado"];
 
-async function lerJsonSeguro(resp) {
+async function lerJsonSeguro(resp: Response): Promise<any> {
   try {
     return await resp.json();
   } catch {
@@ -21,8 +23,20 @@ async function lerJsonSeguro(resp) {
   }
 }
 
+interface Resumo {
+  clientes: number;
+  orcamentos: number;
+  aprovados: number;
+  pendentes: number;
+}
+
+interface ContagemStatus {
+  status: string;
+  total: number;
+}
+
 export default function Dashboard() {
-  const [resumo, setResumo] = useState({
+  const [resumo, setResumo] = useState<Resumo>({
     clientes: 0,
     orcamentos: 0,
     aprovados: 0,
@@ -30,8 +44,8 @@ export default function Dashboard() {
   });
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
-  const [recentes, setRecentes] = useState([]);
-  const [porStatus, setPorStatus] = useState([]);
+  const [recentes, setRecentes] = useState<Orcamento[]>([]);
+  const [porStatus, setPorStatus] = useState<ContagemStatus[]>([]);
   const [faturamento, setFaturamento] = useState(0);
   const [vencidos, setVencidos] = useState(0);
   const [vencendo, setVencendo] = useState(0);
@@ -44,7 +58,7 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function carregar(sinal) {
+  async function carregar(sinal?: AbortSignal) {
     try {
       setCarregando(true);
       const [respResumo, respOrc] = await Promise.all([
@@ -77,12 +91,12 @@ export default function Dashboard() {
           dadosOrc.message || "Não foi possível carregar os orçamentos.",
         );
       }
-      const arr = Array.isArray(dadosOrc)
+      const arr: Orcamento[] = Array.isArray(dadosOrc)
         ? dadosOrc
         : Array.isArray(dadosOrc.data)
           ? dadosOrc.data
           : [];
-      const contagem = {};
+      const contagem: Record<string, number> = {};
       let fat = 0;
       let nVencidos = 0;
       let nVencendo = 0;
@@ -120,26 +134,23 @@ export default function Dashboard() {
       );
       setErro("");
     } catch (e) {
-      if (e?.name === "AbortError" || sinal?.aborted) return;
-      if (e?.name === "TimeoutError") {
-        setErro("O servidor demorou a responder. Tente novamente.");
-      } else {
-        setErro(e.message || "Não foi possível carregar o resumo.");
-      }
+      if (sinal?.aborted) return;
+      const msg = mensagemErroRede(e, "Não foi possível carregar o resumo.");
+      if (msg !== null) setErro(msg);
     } finally {
       if (!sinal?.aborted) setCarregando(false);
     }
   }
 
   const maxStatus = Math.max(1, ...porStatus.map((p) => p.total));
-  const rotulos = {
+  const rotulos: Record<string, string> = {
     rascunho: "Rascunho",
     enviado: "Enviado",
     aprovado: "Aprovado",
     recusado: "Recusado",
     expirado: "Expirado",
   };
-  const barraCor = {
+  const barraCor: Record<string, string> = {
     rascunho: "bg-slate-400",
     enviado: "bg-blue-500",
     aprovado: "bg-emerald-500",
@@ -261,7 +272,7 @@ export default function Dashboard() {
                   </div>
                   <div className="mt-1 h-2 rounded bg-slate-100">
                     <div
-                      className={`h-2 rounded ${barraCor[p.status]}`}
+                      className={`h-2 rounded ${barraCor[p.status] ?? ""}`}
                       style={{ width: `${(p.total / maxStatus) * 100}%` }}
                     />
                   </div>
