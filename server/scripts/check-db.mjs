@@ -8,7 +8,7 @@
 //   3. Funções da migration 0003 (transações atômicas)
 // Usa a service_role (acesso total) — rode na sua máquina, nunca no Git.
 // ============================================================
-import { supabase } from '../src/lib/supabase.js';
+import { supabase } from '../src/lib/supabase.ts';
 
 let falhas = 0;
 function ok(msg) {

@@ -1,15 +1,16 @@
 import express from "express";
+import type { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { supabase } from "./lib/supabase.js";
-import { autenticar } from "./middlewares/autenticar.js";
-import clientesRouter from "./routes/clientes.js";
-import veiculosRouter from "./routes/veiculos.js";
-import perfilRouter from "./routes/perfil.js";
-import lojaRouter from "./routes/loja.js";
-import orcamentosRouter from "./routes/orcamentos.js";
-import catalogoRouter from "./routes/catalogo.js";
+import { supabase } from "./lib/supabase.ts";
+import { autenticar } from "./middlewares/autenticar.ts";
+import clientesRouter from "./routes/clientes.ts";
+import veiculosRouter from "./routes/veiculos.ts";
+import perfilRouter from "./routes/perfil.ts";
+import lojaRouter from "./routes/loja.ts";
+import orcamentosRouter from "./routes/orcamentos.ts";
+import catalogoRouter from "./routes/catalogo.ts";
 
 // ============================================================
 // App Express (sem listen) — o listen fica no index.js.
@@ -43,7 +44,7 @@ app.use(
 
 // Rota de saúde: serve para saber se o servidor está no ar
 // (por isso fica ANTES do porteiro — não precisa de login)
-app.get("/api/health", (req, res) => {
+app.get("/api/health", (_req: Request, res: Response) => {
   res.json({
     status: "ok",
     service: "OrcaPro API",
@@ -56,7 +57,7 @@ app.use("/api", autenticar);
 
 // Resumo para o painel inicial (Dashboard)
 // Conta só os dados do usuário logado
-app.get("/api/resumo", async (req, res, next) => {
+app.get("/api/resumo", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
     const [contCliente, contOrc, contAprov, contPend] = await Promise.all([
@@ -108,12 +109,12 @@ app.use("/api/orcamentos", orcamentosRouter);
 app.use("/api/catalogo", catalogoRouter);
 
 // 404 para rotas desconhecidas
-app.use((req, res) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({ message: "Rota não encontrada." });
 });
 
 // Tratamento global de erro (não vaza detalhes internos em 500)
-app.use((err, req, res, next) => {
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
   const status = err.status || err.statusCode || 500;
   if (status >= 500) {

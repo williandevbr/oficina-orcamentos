@@ -28,6 +28,10 @@ jobs:
         working-directory: server
         run: npm test
 
+      - name: Conferir tipos do servidor (TypeScript)
+        working-directory: server
+        run: npm run typecheck
+
       - name: Instalar dependências do site
         working-directory: client
         run: npm ci

@@ -1,15 +1,16 @@
 import { Router } from "express";
+import type { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
-import { supabase } from "../lib/supabase.js";
-import { mensagemBanco } from "../lib/mensagensErro.js";
-import { calcularTotais, calcularSubtotal } from "../services/calculo.js";
+import { supabase } from "../lib/supabase.ts";
+import { mensagemBanco } from "../lib/mensagensErro.ts";
+import { calcularTotais, calcularSubtotal } from "../services/calculo.ts";
 import {
   idValido,
   orcamentoCriarSchema,
   orcamentoAtualizarSchema,
   primeiraMensagemZod,
-} from "../services/validacao.js";
-import { gerarPdfOrcamento } from "../services/pdf.js";
+} from "../services/validacao.ts";
+import { gerarPdfOrcamento } from "../services/pdf.ts";
 
 // ============================================================
 // Rotas da API de ORÇAMENTOS
@@ -35,7 +36,7 @@ const limitadorPdf = rateLimit({
 
 // Se o Supabase não encontrar a linha, ele responde com o código PGRST116
 // Aqui convertemos isso em HTTP 404 ("não encontrado" — o código certo)
-function tratarNaoEncontrado(error) {
+function tratarNaoEncontrado(error: { code?: string } | null | undefined): boolean {
   return error?.code === "PGRST116";
 }
 
@@ -43,11 +44,11 @@ function tratarNaoEncontrado(error) {
 // Sem ?page -> array (compatível com o site atual).
 // Com ?page -> { data, total, page, limit, totalPages }.
 // Filtros: ?search= (observações ou número), ?status=, ?cliente_id=
-router.get("/", async (req, res, next) => {
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit, search, status, cliente_id } = req.query || {};
 
-    const aplicarFiltros = (query) => {
+    const aplicarFiltros = (query: any) => {
       let q = query.eq("user_id", req.userId);
       if (typeof status === "string" && status.trim() !== "") {
         q = q.eq("status", status.trim());
@@ -82,8 +83,8 @@ router.get("/", async (req, res, next) => {
       return res.json(data);
     }
 
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 20));
     const from = (pageNum - 1) * limitNum;
     const to = from + limitNum - 1;
 
@@ -115,7 +116,7 @@ router.get("/", async (req, res, next) => {
 
 // 2. BAIXAR PDF - gera o arquivo do orçamento
 // (precisa vir antes de "/:id" para o Express não confundir "pdf" com um id)
-router.get("/:id/pdf", limitadorPdf, async (req, res, next) => {
+router.get("/:id/pdf", limitadorPdf, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {
@@ -167,7 +168,7 @@ router.get("/:id/pdf", limitadorPdf, async (req, res, next) => {
 });
 
 // 3. DETALHE de um orçamento (com todos os itens)
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {
@@ -200,7 +201,7 @@ router.get("/:id", async (req, res, next) => {
 
 // 3. CRIAR um orçamento (com seus itens) - TRANSACAO ATOMICA
 // Tudo (cabecalho + itens) e salvo junto ou nada e salvo.
-router.post("/", async (req, res, next) => {
+router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validado = orcamentoCriarSchema.safeParse(req.body || {});
     if (!validado.success) {
@@ -293,7 +294,7 @@ router.post("/", async (req, res, next) => {
 
 // 4. ATUALIZAR um orçamento - TRANSACAO ATOMICA
 // A troca dos itens acontece dentro de uma transacao: ou troca tudo ou nao muda nada.
-router.put("/:id", async (req, res, next) => {
+router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {
@@ -445,7 +446,7 @@ router.put("/:id", async (req, res, next) => {
 });
 
 // 5. APAGAR um orçamento (os itens são apagados junto, automaticamente)
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {

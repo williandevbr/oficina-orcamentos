@@ -18,7 +18,7 @@ import {
   perfilSchema,
   lojaSchema,
   catalogoSchema,
-} from "./validacao.js";
+} from "./validacao.ts";
 
 describe("validarItens", () => {
   const itemValido = {
@@ -66,7 +66,7 @@ describe("validarItens", () => {
 describe("validarCriacaoOrcamento", () => {
   it("recusa orçamento sem cliente", () => {
     const resultado = validarCriacaoOrcamento({ cliente_id: "", itens: [] });
-    expect(resultado.campo).toBe("cliente");
+    expect(resultado?.campo).toBe("cliente");
   });
 
   it("recusa orçamento sem itens (mesmo com cliente)", () => {
@@ -74,7 +74,7 @@ describe("validarCriacaoOrcamento", () => {
       cliente_id: "abc-123",
       itens: [],
     });
-    expect(resultado.campo).toBe("itens");
+    expect(resultado?.campo).toBe("itens");
   });
 
   it("aceita um pedido válido", () => {
@@ -267,7 +267,7 @@ describe("veículos (schemas e filtro)", () => {
     expect(veiculoAtualizarSchema.safeParse({}).success).toBe(false);
     const r = veiculoAtualizarSchema.safeParse({ placa: null });
     expect(r.success).toBe(true);
-    expect(r.data.placa).toBeNull();
+    if (r.success) expect(r.data.placa).toBeNull();
   });
 
   it("filtrarCamposVeiculo bloqueia cliente_id e normaliza placa", () => {
@@ -303,7 +303,7 @@ describe("veículos (schemas e filtro)", () => {
     // "" = sem veículo específico
     const r = orcamentoCriarSchema.safeParse({ ...base, veiculo_id: "" });
     expect(r.success).toBe(true);
-    expect(r.data.veiculo_id).toBeNull();
+    if (r.success) expect(r.data.veiculo_id).toBeNull();
   });
 
   it("PUT de orçamento só com veiculo_id é atualização válida", () => {

@@ -1,12 +1,13 @@
 import { Router } from "express";
-import { supabase } from "../lib/supabase.js";
-import { mensagemBanco } from "../lib/mensagensErro.js";
+import type { Request, Response, NextFunction } from "express";
+import { supabase } from "../lib/supabase.ts";
+import { mensagemBanco } from "../lib/mensagensErro.ts";
 import {
   idValido,
   catalogoSchema,
   catalogoAtualizarSchema,
   primeiraMensagemZod,
-} from "../services/validacao.js";
+} from "../services/validacao.ts";
 
 // ============================================================
 // Rotas da API do CATÁLOGO (peças e serviços)
@@ -21,11 +22,11 @@ import {
 const router = Router();
 
 // 1. LER — só os itens do usuário logado
-router.get("/", async (req, res, next) => {
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit, search, tipo } = req.query || {};
 
-    const aplicarFiltros = (query) => {
+    const aplicarFiltros = (query: any) => {
       let q = query.eq("user_id", req.userId);
       if (tipo === "servico" || tipo === "peca") q = q.eq("tipo", tipo);
       if (typeof search === "string" && search.trim() !== "") {
@@ -47,8 +48,8 @@ router.get("/", async (req, res, next) => {
     }
 
     // Modo paginado
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const pageNum = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 20));
     const from = (pageNum - 1) * limitNum;
     const to = from + limitNum - 1;
 
@@ -75,7 +76,7 @@ router.get("/", async (req, res, next) => {
 });
 
 // 2. CRIAR
-router.post("/", async (req, res, next) => {
+router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validado = catalogoSchema.safeParse(req.body || {});
     if (!validado.success) {
@@ -109,7 +110,7 @@ router.post("/", async (req, res, next) => {
 });
 
 // 3. ATUALIZAR
-router.put("/:id", async (req, res, next) => {
+router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {
@@ -151,7 +152,7 @@ router.put("/:id", async (req, res, next) => {
 });
 
 // 4. APAGAR
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     if (!idValido(id)) {

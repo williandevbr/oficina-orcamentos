@@ -1,4 +1,5 @@
-import { supabase } from "../lib/supabase.js";
+import type { Request, Response, NextFunction } from "express";
+import { supabase } from "../lib/supabase.ts";
 
 // ============================================================
 // Porteiro da API
@@ -7,12 +8,17 @@ import { supabase } from "../lib/supabase.js";
 // Ele confere o "crachá" (token) que o site envia junto com o pedido.
 // Sem crachá válido -> 401 (não autorizado) e nada é feito.
 // ============================================================
-export async function autenticar(req, res, next) {
+export async function autenticar(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   const cabecalho = req.headers.authorization || "";
   const token = cabecalho.startsWith("Bearer ") ? cabecalho.slice(7) : null;
 
   if (!token) {
-    return res.status(401).json({ message: "Faça login para continuar." });
+    res.status(401).json({ message: "Faça login para continuar." });
+    return;
   }
 
   try {
@@ -20,7 +26,8 @@ export async function autenticar(req, res, next) {
     const { data, error } = await supabase.auth.getUser(token);
 
     if (error || !data.user) {
-      return res.status(401).json({ message: "Sessão inválida ou expirada." });
+      res.status(401).json({ message: "Sessão inválida ou expirada." });
+      return;
     }
 
     // Guarda o usuário na requisição para o restante das rotas usarem
@@ -29,6 +36,7 @@ export async function autenticar(req, res, next) {
     req.token = token;
     return next();
   } catch {
-    return res.status(401).json({ message: "Sessão inválida ou expirada." });
+    res.status(401).json({ message: "Sessão inválida ou expirada." });
+    return;
   }
 }

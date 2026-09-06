@@ -4,8 +4,7 @@
 // Fonte única da verdade para validar o que entra na API.
 // - Mensagens em português, amigáveis para o site exibir.
 // - Limites anti-abuso (tamanho, faixa, quantidade de itens).
-// - As funções antigas (validarItens, idValido, etc.) continuam
-//   existindo para não quebrar rotas e testes — agora por cima do Zod.
+// - Os tipos saem dos schemas (z.infer): validação e tipo juntos.
 // ============================================================
 import { z } from "zod";
 
@@ -16,7 +15,9 @@ export const STATUS_VALIDOS = [
   "aprovado",
   "recusado",
   "expirado",
-];
+] as const;
+
+export type StatusValido = (typeof STATUS_VALIDOS)[number];
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -43,13 +44,13 @@ export const LIMITES = {
 };
 
 // ---------- Helpers ----------
-function vazioParaIndefinido(v) {
+function vazioParaIndefinido(v: unknown): unknown {
   if (v === undefined || v === null) return undefined;
   if (typeof v === "string" && v.trim() === "") return undefined;
   return v;
 }
 
-function textoOpcional(max, mensagem) {
+function textoOpcional(max: number, mensagem: string) {
   return z.preprocess(
     vazioParaIndefinido,
     z.string({ error: mensagem }).trim().max(max, { error: mensagem }).optional(),
@@ -57,14 +58,16 @@ function textoOpcional(max, mensagem) {
 }
 
 // Pega a primeira mensagem de erro do Zod em PT
-export function primeiraMensagemZod(resultado) {
+export function primeiraMensagemZod(resultado: {
+  error?: { issues?: Array<{ message?: string }> };
+}): string {
   const erros = resultado.error?.issues || [];
   if (erros.length === 0) return "Dados inválidos.";
   return erros[0].message || "Dados inválidos.";
 }
 
 // ---------- Schemas ----------
-const uuidSchema = (mensagem) =>
+const uuidSchema = (mensagem: string) =>
   z.string({ error: mensagem }).regex(UUID_REGEX, { error: mensagem });
 
 export const itemSchema = z.object({
@@ -175,14 +178,15 @@ const validadeSchema = z.coerce
     error: `Validade inválida (máximo ${LIMITES.validadeMax} dias).`,
   });
 
+const veiculoIdOpcional = z.preprocess(
+  (v) => (v === "" ? null : v),
+  uuidSchema("Veículo inválido.").nullable().optional(),
+);
+
 export const orcamentoCriarSchema = z.object({
   cliente_id: uuidSchema("Escolha um cliente válido para o orçamento."),
   // Veículo do atendimento (opcional; "" vira null = sem veículo específico)
-  veiculo_id: z
-    .preprocess(
-      (v) => (v === "" ? null : v),
-      uuidSchema("Veículo inválido.").nullable().optional(),
-    ),
+  veiculo_id: veiculoIdOpcional,
   status: z
     .enum(STATUS_VALIDOS, {
       error: `Status inválido. Use: ${STATUS_VALIDOS.join(", ")}.`,
@@ -200,11 +204,7 @@ export const orcamentoCriarSchema = z.object({
 export const orcamentoAtualizarSchema = z
   .object({
     cliente_id: uuidSchema("Cliente inválido.").optional(),
-    veiculo_id: z
-      .preprocess(
-        (v) => (v === "" ? null : v),
-        uuidSchema("Veículo inválido.").nullable().optional(),
-      ),
+    veiculo_id: veiculoIdOpcional,
     status: z
       .enum(STATUS_VALIDOS, {
         error: `Status inválido. Use: ${STATUS_VALIDOS.join(", ")}.`,
@@ -274,32 +274,6 @@ export const veiculoAtualizarSchema = z
     path: [],
   });
 
-// ---------- Catálogo (peças e serviços) ----------
-export const catalogoSchema = z.object({
-  descricao: z
-    .string({ error: "Todo item precisa de uma descrição." })
-    .trim()
-    .min(LIMITES.descricaoMin, {
-      error: "Descrição curta demais (mínimo 2 letras).",
-    })
-    .max(LIMITES.descricaoMax, {
-      error: "Descrição muito longa (máximo 140 letras).",
-    }),
-  tipo: z.enum(["servico", "peca"], {
-    error: "O tipo deve ser 'servico' ou 'peca'.",
-  }),
-  valor_unitario: z.coerce
-    .number({ error: "Valor inválido." })
-    .refine((n) => Number.isFinite(n) && n >= 0, {
-      message: "Valor não pode ser negativo.",
-    })
-    .refine((n) => n <= LIMITES.valorMax, {
-      message: "Valor muito alto.",
-    }),
-});
-
-export const catalogoAtualizarSchema = catalogoSchema;
-
 // ---------- Perfil (quem usa o sistema) ----------
 export const perfilSchema = z.object({
   nome: z
@@ -343,11 +317,45 @@ export const lojaSchema = z.object({
   ),
 });
 
+// ---------- Catálogo (peças e serviços) ----------
+export const catalogoSchema = z.object({
+  descricao: z
+    .string({ error: "Todo item precisa de uma descrição." })
+    .trim()
+    .min(LIMITES.descricaoMin, {
+      error: "Descrição curta demais (mínimo 2 letras).",
+    })
+    .max(LIMITES.descricaoMax, {
+      error: "Descrição muito longa (máximo 140 letras).",
+    }),
+  tipo: z.enum(["servico", "peca"], {
+    error: "O tipo deve ser 'servico' ou 'peca'.",
+  }),
+  valor_unitario: z.coerce
+    .number({ error: "Valor inválido." })
+    .refine((n) => Number.isFinite(n) && n >= 0, {
+      message: "Valor não pode ser negativo.",
+    })
+    .refine((n) => n <= LIMITES.valorMax, {
+      message: "Valor muito alto.",
+    }),
+});
+
+export const catalogoAtualizarSchema = catalogoSchema;
+
+// ---------- Tipos inferidos (validação e tipo juntos, sem duplicar) ----------
+export type ItemValido = z.infer<typeof itemSchema>;
+export type OrcamentoCriar = z.infer<typeof orcamentoCriarSchema>;
+export type OrcamentoAtualizar = z.infer<typeof orcamentoAtualizarSchema>;
+export type VeiculoCriar = z.infer<typeof veiculoCriarSchema>;
+export type CatalogoValido = z.infer<typeof catalogoSchema>;
+export type LojaValida = z.infer<typeof lojaSchema>;
+
 // ---------- Funções legadas (mantidas por compatibilidade) ----------
 
 // Valida a lista de itens do orçamento.
 // Retorna null se estiver tudo certo, ou uma mensagem de erro.
-export function validarItens(itens) {
+export function validarItens(itens: unknown): string | null {
   const r = itensSchema.safeParse(itens);
   if (r.success) return null;
   return primeiraMensagemZod(r);
@@ -355,7 +363,13 @@ export function validarItens(itens) {
 
 // Valida o corpo de criação de orçamento.
 // Retorna null se estiver tudo certo, ou um objeto de erro.
-export function validarCriacaoOrcamento({ cliente_id, itens }) {
+export function validarCriacaoOrcamento({
+  cliente_id,
+  itens,
+}: {
+  cliente_id?: unknown;
+  itens?: unknown;
+}): { campo: string; mensagem: string } | null {
   if (!cliente_id) {
     return {
       campo: "cliente",
@@ -369,15 +383,15 @@ export function validarCriacaoOrcamento({ cliente_id, itens }) {
   return null;
 }
 
-export function idValido(id) {
+export function idValido(id: unknown): id is string {
   return typeof id === "string" && UUID_REGEX.test(id);
 }
 
-export function statusValido(status) {
-  return STATUS_VALIDOS.includes(status);
+export function statusValido(status: unknown): status is StatusValido {
+  return (STATUS_VALIDOS as readonly unknown[]).includes(status);
 }
 
-export function descontoValido(desconto) {
+export function descontoValido(desconto: unknown): boolean {
   const n = Number(desconto);
   return Number.isFinite(n) && n >= 0;
 }
@@ -397,18 +411,17 @@ export const CAMPOS_CLIENTE = [
 // Campos permitidos no PUT de veículos (cliente_id nunca muda de dono)
 export const CAMPOS_VEICULO = ["veiculo", "placa"];
 
-export function filtrarCamposVeiculo(body = {}) {
-  const out = {};
-  for (const campo of CAMPOS_VEICULO) {
-    if (body[campo] !== undefined) out[campo] = body[campo];
-  }
+function normalizarTexto(
+  out: Record<string, unknown>,
+  placaComoNulo = false,
+): void {
   // Normaliza: strings com trim; placa em maiúsculas; "" vira undefined
-  // (no PUT, "" na placa significa "apagar a placa" -> vira null no Zod)
+  // (no PUT de veículo, "" na placa significa "apagar a placa" -> null)
   for (const k of Object.keys(out)) {
     if (typeof out[k] === "string") {
-      const t = out[k].trim();
+      const t = (out[k] as string).trim();
       if (t === "") {
-        if (k === "placa") {
+        if (placaComoNulo && k === "placa") {
           out[k] = null;
           continue;
         }
@@ -418,24 +431,26 @@ export function filtrarCamposVeiculo(body = {}) {
       out[k] = k === "placa" ? t.toUpperCase() : t;
     }
   }
-  return out;
 }
 
-export function filtrarCamposCliente(body = {}) {
-  const out = {};
+export function filtrarCamposCliente(
+  body: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
   for (const campo of CAMPOS_CLIENTE) {
     if (body[campo] !== undefined) out[campo] = body[campo];
   }
-  // Normaliza: strings com trim; placa em maiúsculas; "" vira undefined
-  for (const k of Object.keys(out)) {
-    if (typeof out[k] === "string") {
-      const t = out[k].trim();
-      if (t === "") {
-        delete out[k];
-        continue;
-      }
-      out[k] = k === "placa" ? t.toUpperCase() : t;
-    }
+  normalizarTexto(out);
+  return out;
+}
+
+export function filtrarCamposVeiculo(
+  body: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const campo of CAMPOS_VEICULO) {
+    if (body[campo] !== undefined) out[campo] = body[campo];
   }
+  normalizarTexto(out, true);
   return out;
 }

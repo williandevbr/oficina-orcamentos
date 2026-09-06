@@ -1,10 +1,11 @@
 import { Router } from "express";
-import { supabase } from "../lib/supabase.js";
-import { mensagemBanco } from "../lib/mensagensErro.js";
+import type { Request, Response, NextFunction } from "express";
+import { supabase } from "../lib/supabase.ts";
+import { mensagemBanco } from "../lib/mensagensErro.ts";
 import {
   lojaSchema,
   primeiraMensagemZod,
-} from "../services/validacao.js";
+} from "../services/validacao.ts";
 
 // ============================================================
 // Rotas da LOJA (dados da oficina, usados no PDF)
@@ -16,7 +17,7 @@ import {
 const router = Router();
 
 // LER os dados da loja do usuário logado
-router.get("/", async (req, res, next) => {
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { data, error } = await supabase
       .from("loja")
@@ -37,7 +38,7 @@ router.get("/", async (req, res, next) => {
 });
 
 // CRIAR OU ATUALIZAR (upsert: salva pelo dono, sem duplicar)
-router.put("/", async (req, res, next) => {
+router.put("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validado = lojaSchema.safeParse(req.body || {});
     if (!validado.success) {
