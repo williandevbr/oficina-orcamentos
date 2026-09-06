@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Save, Loader2, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext.jsx";
@@ -22,6 +22,7 @@ async function lerJsonSeguro(resp) {
 
 export default function Perfil() {
   const { usuario } = useAuth();
+  const navigate = useNavigate();
   const [nome, setNome] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -73,6 +74,12 @@ export default function Perfil() {
       }
       setPrimeiraVez(false);
       toast.success("Perfil salvo!");
+      // Avisa o layout para liberar a navegação na hora
+      window.dispatchEvent(new Event("perfil-atualizado"));
+      // Primeira vez: segue para cadastrar a oficina
+      if (primeiraVez) {
+        navigate("/configuracoes");
+      }
     } catch {
       setErro("Erro de conexão com o servidor.");
     } finally {

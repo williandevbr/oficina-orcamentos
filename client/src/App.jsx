@@ -35,7 +35,8 @@ function LayoutAutenticado() {
   // Onboarding: na primeira entrada (sem perfil) manda criar o perfil
   useEffect(() => {
     let ativo = true;
-    (async () => {
+
+    async function verificarPerfil() {
       try {
         const resp = await apiFetch("/api/perfil");
         if (!ativo) return;
@@ -47,11 +48,23 @@ function LayoutAutenticado() {
         setPerfilOk(Boolean(dados?.nome));
       } catch {
         // Sem conexão: não trava o sistema (tenta de novo no próximo login)
-        if (ativo) setPerfilOk(null);
+        if (ativo) setPerfilOk(true);
       }
-    })();
+    }
+
+    verificarPerfil();
+
+    // A página de perfil avisa quando salva (para liberar na hora).
+    // Liberação otimista: acabou de salvar, então libera de imediato
+    // e confirma com o servidor em seguida (evita piscar de tela).
+    function aoAtualizar() {
+      setPerfilOk(true);
+      verificarPerfil();
+    }
+    window.addEventListener("perfil-atualizado", aoAtualizar);
     return () => {
       ativo = false;
+      window.removeEventListener("perfil-atualizado", aoAtualizar);
     };
   }, [usuario]);
 
