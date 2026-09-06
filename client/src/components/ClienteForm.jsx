@@ -48,7 +48,7 @@ export default function ClienteForm({
       maxLength: 15,
     },
     { nome: "email", label: "E-mail", tipo: "email" },
-    { nome: "documento", label: "CPF / CNPJ", tipo: "text" },
+    { nome: "documento", label: "CPF / CNPJ", tipo: "text", maxLength: 18 },
     { nome: "endereco", label: "Endereço", tipo: "text" },
   ];
   // Veículos ficam em tela própria (1 cliente -> N veículos),
