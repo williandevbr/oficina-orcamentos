@@ -218,6 +218,69 @@ describe("veículos (1 cliente -> N veículos)", () => {
   });
 });
 
+describe("perfil e loja (configurações)", () => {
+  it("GET /api/perfil sem perfil devolve 404", async () => {
+    vi.spyOn(supabase, "from").mockImplementation(() =>
+      consultaFalsa({ data: null, error: null }, []),
+    );
+
+    const resp = await request(app)
+      .get("/api/perfil")
+      .set("Authorization", "Bearer token-teste");
+
+    expect(resp.status).toBe(404);
+  });
+
+  it("PUT /api/perfil sem nome recusa (400) sem encostar na tabela", async () => {
+    const spyFrom = vi
+      .spyOn(supabase, "from")
+      .mockImplementation(() => consultaFalsa({ data: [], error: null }, []));
+
+    const resp = await request(app)
+      .put("/api/perfil")
+      .set("Authorization", "Bearer token-teste")
+      .send({ nome: "A" });
+
+    expect(resp.status).toBe(400);
+    expect(spyFrom).not.toHaveBeenCalled();
+  });
+
+  it("GET /api/loja sem cadastro devolve 404", async () => {
+    vi.spyOn(supabase, "from").mockImplementation(() =>
+      consultaFalsa({ data: null, error: null }, []),
+    );
+
+    const resp = await request(app)
+      .get("/api/loja")
+      .set("Authorization", "Bearer token-teste");
+
+    expect(resp.status).toBe(404);
+  });
+
+  it("PUT /api/loja sem nome recusa (400) sem encostar na tabela", async () => {
+    const spyFrom = vi
+      .spyOn(supabase, "from")
+      .mockImplementation(() => consultaFalsa({ data: [], error: null }, []));
+
+    const resp = await request(app)
+      .put("/api/loja")
+      .set("Authorization", "Bearer token-teste")
+      .send({ telefone: "11999999999" });
+
+    expect(resp.status).toBe(400);
+    expect(spyFrom).not.toHaveBeenCalled();
+  });
+
+  it("PUT /api/loja com e-mail inválido recusa (400)", async () => {
+    const resp = await request(app)
+      .put("/api/loja")
+      .set("Authorization", "Bearer token-teste")
+      .send({ nome_loja: "Auto Center", email: "nao-email" });
+
+    expect(resp.status).toBe(400);
+  });
+});
+
 describe("catálogo (peças e serviços)", () => {
   it("GET sem crachá nega (401)", async () => {
     const resp = await request(app).get("/api/catalogo");

@@ -142,8 +142,15 @@ router.get("/:id/pdf", limitadorPdf, async (req, res, next) => {
   }
 
   try {
+    // Dados da loja para o cabeçalho/assinatura do PDF (se não cadastrou, usa o padrão)
+    const { data: loja } = await supabase
+      .from("loja")
+      .select("nome_loja, telefone, endereco, cnpj")
+      .eq("user_id", req.userId)
+      .maybeSingle();
+
     // Gera o PDF profissional
-    const buffer = await gerarPdfOrcamento(data);
+    const buffer = await gerarPdfOrcamento(data, loja || null);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
