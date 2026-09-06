@@ -17,8 +17,6 @@ const AUTOCOMPLETE = {
   email: "email",
   documento: undefined,
   endereco: "street-address",
-  veiculo: undefined,
-  placa: undefined,
 };
 
 export default function ClienteForm({
@@ -52,16 +50,9 @@ export default function ClienteForm({
     { nome: "email", label: "E-mail", tipo: "email" },
     { nome: "documento", label: "CPF / CNPJ", tipo: "text" },
     { nome: "endereco", label: "Endereço", tipo: "text" },
-    { nome: "veiculo", label: "Veículo", tipo: "text" },
-    {
-      nome: "placa",
-      label: "Placa",
-      tipo: "text",
-      placeholder: "ABC1D23",
-      maxLength: 8,
-      maiuscula: true,
-    },
   ];
+  // Veículos ficam em tela própria (1 cliente -> N veículos),
+  // gerenciados pelo botão de carro na lista de clientes.
 
   return (
     <div

@@ -8,8 +8,8 @@
 
 O OrcaPro resolve o dia a dia de uma oficina mecânica:
 
-- **Cadastra clientes** (nome, telefone, carro, placa, observações)
-- **Cria orçamentos** com quantos serviços e peças quiser
+- **Cadastra clientes** (nome, telefone, observações) e os **veículos de cada um** (moto, carro, placa — quantos tiver)
+- **Cria orçamentos** com quantos serviços e peças quiser, escolhendo **qual veículo** entrou na oficina
 - **Calcula tudo sozinho** — o total, com desconto, aparece na hora
 - **Gera um PDF bonito** com o nome da oficina, os itens e os totais, pronto para mandar ao cliente
 - **Controla o status** de cada orçamento (rascunho, enviado, aprovado, recusado)
@@ -169,14 +169,16 @@ Quando quiser desligar, feche as duas janelas do terminal ou pressione `Ctrl+C` 
 
 1. No menu lateral, clique em **Clientes**
 2. Clique no botão **Novo cliente** (canto superior direito)
-3. Preencha nome, telefone, e-mail, carro e placa
+3. Preencha nome, telefone, e-mail e endereço
 4. Clique em **Salvar**
+5. Para cadastrar a moto, o carro etc.: clique no **botão do carro** na linha do cliente e em **Adicionar**
 
 ### Criar um orçamento
 
 1. No menu lateral, clique em **Orçamentos**
 2. Clique em **Novo orçamento**
 3. Escolha o cliente (ou cadastre um novo, se precisar)
+4. Escolha o **veículo** que entrou na oficina (se o cliente tiver mais de um)
 4. Adicione os itens: para cada serviço ou peça, clique em **Adicionar item** e preencha o que é, a quantidade e o valor
 5. Se quiser dar um desconto, preencha o campo **Desconto**
 6. O **total** é calculado sozinho, embaixo
@@ -252,17 +254,26 @@ Todas as rotas abaixo de `/api` exigem o cabeçalho `Authorization: Bearer <toke
 
 | Método | Rota                | Descrição                                        |
 | ------ | ------------------- | ------------------------------------------------ |
-| GET    | `/api/clientes`     | Lista os seus clientes (`?search=` busca por nome, telefone, placa; `?page=&limit=` pagina) |
+| GET    | `/api/clientes`     | Lista os seus clientes (`?search=` busca por nome, telefone, placa — inclusive dos veículos; `?page=&limit=` pagina) |
 | POST   | `/api/clientes`     | Cria um cliente (nome 2–120 letras, e-mail válido) |
 | PUT    | `/api/clientes/:id` | Atualiza um cliente                              |
 | DELETE | `/api/clientes/:id` | Exclui um cliente                                |
+
+### Veículos
+
+| Método | Rota                | Descrição                                        |
+| ------ | ------------------- | ------------------------------------------------ |
+| GET    | `/api/veiculos`     | Lista os seus veículos (`?cliente_id=`, `?search=` por veículo/placa) |
+| POST   | `/api/veiculos`     | Cadastra um veículo num cliente seu              |
+| PUT    | `/api/veiculos/:id` | Atualiza nome/placa                              |
+| DELETE | `/api/veiculos/:id` | Exclui (orçamentos ficam sem veículo)            |
 
 ### Orçamentos
 
 | Método | Rota                      | Descrição                                                                 |
 | ------ | ------------------------- | ------------------------------------------------------------------------- |
 | GET    | `/api/orcamentos`         | Lista orçamentos (`?status=`, `?cliente_id=`, `?search=` por número/observações, `?page=&limit=` pagina) |
-| POST   | `/api/orcamentos`         | Cria um orçamento (transação atômica: salva tudo ou nada; desconto nunca maior que o subtotal; validade 1–365 dias; até 100 itens) |
+| POST   | `/api/orcamentos`         | Cria um orçamento (`veiculo_id` opcional; transação atômica: salva tudo ou nada; desconto nunca maior que o subtotal; validade 1–365 dias; até 100 itens) |
 | GET    | `/api/orcamentos/:id`     | Detalhe completo (com os itens)                                           |
 | PUT    | `/api/orcamentos/:id`     | Atualiza (transação atômica, recalcula o total)                           |
 | DELETE | `/api/orcamentos/:id`     | Exclui                                                                    |
@@ -285,10 +296,11 @@ curl -H "Authorization: Bearer SEU_TOKEN" http://localhost:3333/api/clientes
 
 ---
 
-## Banco de dados (3 tabelas + 3 atualizações)
+## Banco de dados (4 tabelas + 4 atualizações)
 
-- **clientes** — guarda os dados de cada cliente (nome, contato, carro, placa), cada um com seu dono (`user_id`)
-- **orcamentos** — guarda o cabeçalho de cada orçamento (cliente, total, desconto, status, validade)
+- **clientes** — guarda cada pessoa (nome, contato), cada um com seu dono (`user_id`)
+- **veiculos** — guarda os veículos de cada cliente (moto, carro, placa)
+- **orcamentos** — guarda o cabeçalho de cada orçamento (cliente, veículo, total, desconto, status, validade)
 - **orcamento_itens** — guarda cada item de cada orçamento (descrição, quantidade, valor unitário)
 
 As atualizações são aplicadas em ordem pelos arquivos em `supabase/migrations/`:
@@ -297,6 +309,7 @@ As atualizações são aplicadas em ordem pelos arquivos em `supabase/migrations
 2. `0002_isolamento_user_validade.sql` — dono por usuário, status "expirado", travas de valores
 3. `0003_transacoes_orcamento.sql` — funções que salvam orçamento + itens numa transação só
 4. `0004_catalogo_itens.sql` — tabela do catálogo de peças e serviços
+5. `0005_veiculos.sql` — tabela de veículos + veículo no orçamento (leva os antigos junto)
 
 ---
 

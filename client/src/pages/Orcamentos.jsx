@@ -34,6 +34,7 @@ import { apiFetch } from "../lib/api.js";
 
 const API = "/api/orcamentos";
 const API_CLIENTES = "/api/clientes";
+const API_VEICULOS = "/api/veiculos";
 const API_CATALOGO = "/api/catalogo";
 const POR_PAGINA = 8;
 
@@ -94,7 +95,10 @@ function LinhaOrcamento({ orc, baixando, editando, onBaixar, onEditar, onExcluir
           {orc.clientes?.nome || "—"}
         </div>
         <div className="text-xs text-slate-400">
-          {orc.clientes?.veiculo || ""}
+          {orc.veiculos?.veiculo || orc.clientes?.veiculo || ""}
+          {orc.veiculos?.placa || orc.clientes?.placa
+            ? ` • ${orc.veiculos?.placa || orc.clientes?.placa}`
+            : ""}
         </div>
       </td>
       <td className="px-5 py-3 font-semibold text-blue-800">
@@ -181,6 +185,7 @@ export default function Orcamentos() {
   const [total, setTotal] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [clientes, setClientes] = useState([]);
+  const [veiculos, setVeiculos] = useState([]);
   const [catalogo, setCatalogo] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
@@ -248,16 +253,18 @@ export default function Orcamentos() {
 
       if (!buscaDebounced && !alerta) {
         // Modo paginado no servidor
-        const [respOrc, respCli, respCat] = await Promise.all([
+        const [respOrc, respCli, respVei, respCat] = await Promise.all([
           apiFetch(`${API}?page=${pagina}&limit=${POR_PAGINA}${statusParam}`, {
             signal: sinal,
           }),
           apiFetch(API_CLIENTES, { signal: sinal }),
+          apiFetch(API_VEICULOS, { signal: sinal }),
           apiFetch(API_CATALOGO, { signal: sinal }),
         ]);
-        const [dadosOrc, dadosCli, dadosCat] = await Promise.all([
+        const [dadosOrc, dadosCli, dadosVei, dadosCat] = await Promise.all([
           lerJsonSeguro(respOrc),
           lerJsonSeguro(respCli),
+          lerJsonSeguro(respVei),
           lerJsonSeguro(respCat),
         ]);
         if (sinal?.aborted) return;
@@ -277,20 +284,23 @@ export default function Orcamentos() {
           setTotalPaginas(dadosOrc.totalPages ?? 1);
         }
         setClientes(Array.isArray(dadosCli) ? dadosCli : dadosCli.data || []);
+        setVeiculos(Array.isArray(dadosVei) ? dadosVei : dadosVei.data || []);
         setCatalogo(Array.isArray(dadosCat) ? dadosCat : dadosCat.data || []);
       } else {
         // Modo busca: lista com filtro de status e filtra o texto no navegador
         // (para achar também por nome do cliente e placa)
-        const [respOrc, respCli, respCat] = await Promise.all([
+        const [respOrc, respCli, respVei, respCat] = await Promise.all([
           apiFetch(`${API}?status=${filtroStatus === "todos" ? "" : filtroStatus}`, {
             signal: sinal,
           }),
           apiFetch(API_CLIENTES, { signal: sinal }),
+          apiFetch(API_VEICULOS, { signal: sinal }),
           apiFetch(API_CATALOGO, { signal: sinal }),
         ]);
-        const [dadosOrc, dadosCli, dadosCat] = await Promise.all([
+        const [dadosOrc, dadosCli, dadosVei, dadosCat] = await Promise.all([
           lerJsonSeguro(respOrc),
           lerJsonSeguro(respCli),
+          lerJsonSeguro(respVei),
           lerJsonSeguro(respCat),
         ]);
         if (sinal?.aborted) return;
@@ -308,7 +318,13 @@ export default function Orcamentos() {
         const filtrada = lista.filter((orc) => {
           if (
             buscaDebounced &&
-            ![String(orc.numero), orc.clientes?.nome, orc.clientes?.placa]
+            ![
+              String(orc.numero),
+              orc.clientes?.nome,
+              orc.clientes?.placa,
+              orc.veiculos?.veiculo,
+              orc.veiculos?.placa,
+            ]
               .join(" ")
               .toLowerCase()
               .includes(termo)
@@ -334,6 +350,7 @@ export default function Orcamentos() {
         setTotal(filtrada.length);
         setTotalPaginas(totPag);
         setClientes(Array.isArray(dadosCli) ? dadosCli : dadosCli.data || []);
+        setVeiculos(Array.isArray(dadosVei) ? dadosVei : dadosVei.data || []);
         setCatalogo(Array.isArray(dadosCat) ? dadosCat : dadosCat.data || []);
       }
       setErro("");
@@ -641,6 +658,7 @@ export default function Orcamentos() {
         <OrcamentoForm
           key={dadosEdicao?.id || "novo"}
           clientes={clientes}
+          veiculos={veiculos}
           catalogo={catalogo}
           dadosIniciais={dadosEdicao}
           erro={erroForm}

@@ -54,4 +54,13 @@ describe("gerarPdfOrcamento", () => {
     });
     expect(buffer.length).toBeGreaterThan(1000);
   });
+
+  it("usa o veículo do orçamento quando informado", async () => {
+    const buffer = await gerarPdfOrcamento({
+      ...orcamentoExemplo,
+      veiculos: { veiculo: "Honda CG 160", placa: "ABC1D23" },
+    });
+    expect(buffer.length).toBeGreaterThan(1000);
+    expect(Buffer.from(buffer.slice(0, 5)).toString()).toBe("%PDF-");
+  });
 });

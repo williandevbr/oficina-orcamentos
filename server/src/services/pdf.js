@@ -132,7 +132,12 @@ export async function gerarPdfOrcamento(orcamento) {
         .reduce((s, i) => s + i.total, 0) * 100,
     ) / 100;
 
-  const linhaVeiculo = [cliente.veiculo, cliente.placa]
+  // Veículo do atendimento (tabela nova) com reserva no cadastro do cliente
+  const veicOrc = orcamento.veiculos || {};
+  const linhaVeiculo = [
+    veicOrc.veiculo || cliente.veiculo,
+    veicOrc.placa || cliente.placa,
+  ]
     .filter(Boolean)
     .join("  •  ");
   const contatoOficina = [oficina.telefone, oficina.endereco]
