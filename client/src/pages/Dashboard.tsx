@@ -47,6 +47,8 @@ export default function Dashboard() {
   const [recentes, setRecentes] = useState<Orcamento[]>([]);
   const [porStatus, setPorStatus] = useState<ContagemStatus[]>([]);
   const [faturamento, setFaturamento] = useState(0);
+  const [recebido, setRecebido] = useState(0);
+  const [aReceber, setAReceber] = useState(0);
   const [vencidos, setVencidos] = useState(0);
   const [vencendo, setVencendo] = useState(0);
 
@@ -98,6 +100,8 @@ export default function Dashboard() {
           : [];
       const contagem: Record<string, number> = {};
       let fat = 0;
+      let rec = 0;
+      let aRec = 0;
       let nVencidos = 0;
       let nVencendo = 0;
       const agora = new Date();
@@ -106,6 +110,8 @@ export default function Dashboard() {
       for (const o of arr) {
         contagem[o.status] = (contagem[o.status] || 0) + 1;
         if (o.status === "aprovado") fat += Number(o.total) || 0;
+        if (o.pago) rec += Number(o.total) || 0;
+        else aRec += Number(o.total) || 0;
         // Alerta de validade (só pendentes: rascunho/enviado)
         if (o.status === "rascunho" || o.status === "enviado") {
           const ate = calcularValidoAte(o.created_at, o.validade_dias);
@@ -121,6 +127,8 @@ export default function Dashboard() {
         STATUS_LISTA.map((s) => ({ status: s, total: contagem[s] || 0 })),
       );
       setFaturamento(fat);
+      setRecebido(rec);
+      setAReceber(aRec);
       setRecentes(
         [...arr]
           .sort((a, b) => {
@@ -282,6 +290,16 @@ export default function Dashboard() {
                 Faturamento aprovado:{" "}
                 <span className="font-bold text-emerald-700">
                   {formatarMoeda(faturamento)}
+                </span>
+              </p>
+              <p className="text-sm text-slate-500">
+                Recebido:{" "}
+                <span className="font-bold text-emerald-700">
+                  {formatarMoeda(recebido)}
+                </span>{" "}
+                · A receber:{" "}
+                <span className="font-bold text-amber-700">
+                  {formatarMoeda(aReceber)}
                 </span>
               </p>
             </div>

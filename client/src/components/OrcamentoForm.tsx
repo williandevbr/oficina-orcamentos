@@ -46,6 +46,7 @@ interface FormOrcamento {
   desconto: number | string;
   observacoes: string;
   validade_dias: number | string;
+  pago: boolean;
 }
 
 type CampoForm =
@@ -54,7 +55,8 @@ type CampoForm =
   | "status"
   | "desconto"
   | "observacoes"
-  | "validade_dias";
+  | "validade_dias"
+  | "pago";
 
 type CampoItem = "tipo" | "descricao" | "quantidade" | "valor_unitario";
 
@@ -67,6 +69,7 @@ export interface PayloadOrcamento {
   observacoes: string;
   validade_dias: number;
   itens: OrcamentoItem[];
+  pago: boolean;
 }
 
 const itemVazio: ItemLinha = {
@@ -117,6 +120,7 @@ export default function OrcamentoForm({
     desconto: dadosIniciais?.desconto ?? 0,
     observacoes: dadosIniciais?.observacoes || "",
     validade_dias: dadosIniciais?.validade_dias || 7,
+    pago: dadosIniciais?.pago ?? false,
   });
 
   // Estado dos itens (cada um com chave estável para o React)
@@ -130,6 +134,10 @@ export default function OrcamentoForm({
   const [sugestaoAberta, setSugestaoAberta] = useState(-1);
 
   function aoMudar(campo: CampoForm, valor: string) {
+    if (campo === "pago") {
+      setForm({ ...form, pago: valor === "true" });
+      return;
+    }
     if (campo === "cliente_id") {
       // Trocou de cliente -> o veículo anterior não vale mais
       setForm({ ...form, cliente_id: valor, veiculo_id: "" });
@@ -244,6 +252,7 @@ export default function OrcamentoForm({
       status: form.status,
       desconto: descontoNum,
       observacoes: form.observacoes,
+      pago: form.pago,
       validade_dias: Math.min(
         365,
         Math.max(1, Number(form.validade_dias) || 7),
@@ -349,6 +358,24 @@ export default function OrcamentoForm({
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />
             </div>
+          </div>
+
+          {/* Pagamento (financeiro básico: só para saber se recebeu) */}
+          <div>
+            <span className="mb-1 block text-sm font-medium text-slate-700">
+              Pagamento
+            </span>
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900">
+              <input
+                type="checkbox"
+                checked={form.pago}
+                onChange={(e) =>
+                  setForm({ ...form, pago: e.target.checked })
+                }
+                className="h-4 w-4 accent-emerald-600"
+              />
+              Recebido
+            </label>
           </div>
 
           {/* Veículo do atendimento (só aparece se o cliente tiver) */}

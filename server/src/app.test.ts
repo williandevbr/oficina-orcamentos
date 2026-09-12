@@ -145,6 +145,35 @@ describe("orçamentos (validação e paginação)", () => {
 
     expect(resp.status).toBe(400);
   });
+
+  it("PUT só com pago alterna recebido/pendente sem mexer nos itens", async () => {
+    vi.spyOn(supabase, "from").mockImplementation(() =>
+      consultaFalsa(
+        {
+          data: { id: "o1", numero: 7, pago: true },
+          error: null,
+        },
+        [],
+      ),
+    );
+
+    const resp = await request(app)
+      .put("/api/orcamentos/11111111-2222-3333-4444-555555555555")
+      .set("Authorization", "Bearer token-teste")
+      .send({ pago: true });
+
+    expect(resp.status).toBe(200);
+    expect(resp.body.pago).toBe(true);
+  });
+
+  it("PUT com pago inválido recusa (400)", async () => {
+    const resp = await request(app)
+      .put("/api/orcamentos/11111111-2222-3333-4444-555555555555")
+      .set("Authorization", "Bearer token-teste")
+      .send({ pago: "sim" });
+
+    expect(resp.status).toBe(400);
+  });
 });
 
 describe("veículos (1 cliente -> N veículos)", () => {

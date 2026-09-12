@@ -43,15 +43,20 @@ function tratarNaoEncontrado(error: { code?: string } | null | undefined): boole
 // 1. LISTAR orçamentos do usuário logado (com o nome/veículo do cliente)
 // Sem ?page -> array (compatível com o site atual).
 // Com ?page -> { data, total, page, limit, totalPages }.
-// Filtros: ?search= (observações ou número), ?status=, ?cliente_id=
+// Filtros: ?search= (observações ou número), ?status=, ?cliente_id=, ?pago=true|false
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { page, limit, search, status, cliente_id } = req.query || {};
+    const { page, limit, search, status, cliente_id, pago } = req.query || {};
 
     const aplicarFiltros = (query: any) => {
       let q = query.eq("user_id", req.userId);
       if (typeof status === "string" && status.trim() !== "") {
         q = q.eq("status", status.trim());
+      }
+      if (typeof pago === "string" && pago.trim() !== "") {
+        const p = pago.trim().toLowerCase();
+        if (p === "true" || p === "1") q = q.eq("pago", true);
+        else if (p === "false" || p === "0") q = q.eq("pago", false);
       }
       if (typeof cliente_id === "string" && cliente_id.trim() !== "") {
         if (!idValido(cliente_id.trim())) {
@@ -215,6 +220,7 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
       observacoes,
       validade_dias = 7,
       itens,
+      pago = false,
     } = validado.data;
     const validadeNum = validade_dias;
 
@@ -275,6 +281,15 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Busca o registro completo para devolver ao site
+    // Se veio marcado como recebido já na criação, grava o pago em seguida
+    // (a função SQL antiga não conhece a coluna nova — atualização direta).
+    if (pago === true && novoId) {
+      await supabase
+        .from("orcamentos")
+        .update({ pago: true })
+        .eq("id", novoId)
+        .eq("user_id", req.userId);
+    }
     const { data: completo, error: errBusca } = await supabase
       .from("orcamentos")
       .select("*, orcamento_itens(*)")
@@ -312,13 +327,44 @@ router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
         validade_dias: corpo.validade_dias,
       }),
       ...(corpo.itens !== undefined && { itens: corpo.itens }),
+      ...(corpo.pago !== undefined && { pago: corpo.pago }),
     };
     const validado = orcamentoAtualizarSchema.safeParse(entrada);
     if (!validado.success) {
       return res.status(400).json({ message: primeiraMensagemZod(validado) });
     }
-    const { cliente_id, veiculo_id, status, desconto, observacoes, validade_dias, itens } =
+    const { cliente_id, veiculo_id, status, desconto, observacoes, validade_dias, itens, pago } =
       validado.data;
+
+    // Atalho: marcou/desmarcou só o "recebido" — atualização direta,
+    // sem passar pela transação de itens (não mexe em total).
+    const soMudouPago =
+      pago !== undefined &&
+      cliente_id === undefined &&
+      veiculo_id === undefined &&
+      status === undefined &&
+      desconto === undefined &&
+      observacoes === undefined &&
+      validade_dias === undefined &&
+      itens === undefined;
+    if (soMudouPago) {
+      const { data: soPago, error: errPago } = await supabase
+        .from("orcamentos")
+        .update({ pago })
+        .eq("id", id)
+        .eq("user_id", req.userId)
+        .select(
+          "*, clientes(nome, veiculo, placa, telefone), veiculos(veiculo, placa), orcamento_itens(*)",
+        )
+        .maybeSingle();
+      if (errPago) {
+        return res.status(400).json({ message: mensagemBanco(errPago) });
+      }
+      if (!soPago) {
+        return res.status(404).json({ message: "Orçamento não encontrado." });
+      }
+      return res.json(soPago);
+    }
 
     // Busca o atual (com dono) para completar os campos que nao vieram
     const { data: atual, error: errAtual } = await supabase
@@ -425,6 +471,16 @@ router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
         return res.status(400).json({ message: "Itens inválidos." });
       }
       return res.status(400).json({ message: mensagemBanco(errRpc) });
+    }
+
+    // Se veio o campo pago junto de outras mudanças, grava em seguida
+    // (a função SQL antiga não conhece a coluna nova — atualização direta).
+    if (pago !== undefined) {
+      await supabase
+        .from("orcamentos")
+        .update({ pago })
+        .eq("id", id)
+        .eq("user_id", req.userId);
     }
 
     const { data, error } = await supabase

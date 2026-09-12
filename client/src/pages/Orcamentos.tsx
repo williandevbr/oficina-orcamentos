@@ -10,6 +10,8 @@ import {
   MessageCircle,
   X,
   Loader2,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import OrcamentoForm from "../components/OrcamentoForm";
@@ -83,21 +85,38 @@ function BadgeStatus({ status }: { status: StatusOrcamento }) {
   );
 }
 
+// Selo do financeiro básico (só para saber se recebeu)
+function BadgePagamento({ pago }: { pago?: boolean }) {
+  return pago ? (
+    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+      Recebido
+    </span>
+  ) : (
+    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+      Pendente
+    </span>
+  );
+}
+
 // Uma linha da tabela (memoizada: evita recalcular link/validade à toa)
 function LinhaOrcamento({
   orc,
   baixando,
   editando,
+  alternandoPago,
   onBaixar,
   onEditar,
   onExcluir,
+  onAlternarPago,
 }: {
   orc: Orcamento;
   baixando: boolean;
   editando: boolean;
+  alternandoPago: boolean;
   onBaixar: (orc: Orcamento) => void;
   onEditar: (id: string) => void;
   onExcluir: (id: string) => void;
+  onAlternarPago: (orc: Orcamento) => void;
 }) {
   const linha = useMemo(() => {
     const validoAte = calcularValidoAte(orc.created_at, orc.validade_dias);
@@ -131,6 +150,27 @@ function LinhaOrcamento({
       </td>
       <td className="px-5 py-3">
         <BadgeStatus status={orc.status} />
+      </td>
+      <td className="px-5 py-3">
+        <div className="flex items-center gap-2">
+          <BadgePagamento pago={orc.pago} />
+          <button
+            type="button"
+            onClick={() => onAlternarPago(orc)}
+            disabled={alternandoPago}
+            title={orc.pago ? "Marcar como pendente" : "Marcar como recebido"}
+            aria-label={orc.pago ? `Marcar orçamento ${orc.numero} como pendente` : `Marcar orçamento ${orc.numero} como recebido`}
+            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700 disabled:opacity-50"
+          >
+            {alternandoPago ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : orc.pago ? (
+              <Clock className="h-4 w-4" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </td>
       <td className="px-5 py-3 text-slate-500">
         <div>{formatarData(orc.created_at)}</div>
@@ -225,6 +265,8 @@ export default function Orcamentos() {
   const [busca, setBusca] = useState("");
   const [buscaDebounced, setBuscaDebounced] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [filtroPagamento, setFiltroPagamento] = useState("todos");
+  const [alternandoPagoId, setAlternandoPagoId] = useState<string | null>(null);
   const [pagina, setPagina] = useState(1);
   const [idParaExcluir, setIdParaExcluir] = useState<string | null>(null);
   const [excluindo, setExcluindo] = useState(false);
@@ -258,14 +300,14 @@ export default function Orcamentos() {
 
   useEffect(() => {
     setPagina(1);
-  }, [filtroStatus]);
+  }, [filtroStatus, filtroPagamento]);
 
   useEffect(() => {
     const controle = new AbortController();
     carregarTudo(controle.signal);
     return () => controle.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagina, buscaDebounced, filtroStatus, alerta]);
+  }, [pagina, buscaDebounced, filtroStatus, filtroPagamento, alerta]);
 
   const inicio = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
   const fim = Math.min(pagina * POR_PAGINA, total);
@@ -275,11 +317,17 @@ export default function Orcamentos() {
       setCarregando(true);
       const statusParam =
         filtroStatus !== "todos" ? `&status=${filtroStatus}` : "";
+      const pagoParam =
+        filtroPagamento === "recebido"
+          ? "&pago=true"
+          : filtroPagamento === "pendente"
+            ? "&pago=false"
+            : "";
 
       if (!buscaDebounced && !alerta) {
         // Modo paginado no servidor
         const [respOrc, respCli, respVei, respCat] = await Promise.all([
-          apiFetch(`${API}?page=${pagina}&limit=${POR_PAGINA}${statusParam}`, {
+          apiFetch(`${API}?page=${pagina}&limit=${POR_PAGINA}${statusParam}${pagoParam}`, {
             signal: sinal,
           }),
           apiFetch(API_CLIENTES, { signal: sinal }),
@@ -315,7 +363,7 @@ export default function Orcamentos() {
         // Modo busca: lista com filtro de status e filtra o texto no navegador
         // (para achar também por nome do cliente e placa)
         const [respOrc, respCli, respVei, respCat] = await Promise.all([
-          apiFetch(`${API}?status=${filtroStatus === "todos" ? "" : filtroStatus}`, {
+          apiFetch(`${API}?status=${filtroStatus === "todos" ? "" : filtroStatus}${pagoParam}`, {
             signal: sinal,
           }),
           apiFetch(API_CLIENTES, { signal: sinal }),
@@ -457,6 +505,32 @@ export default function Orcamentos() {
     setIdParaExcluir(id);
   }
 
+  // Marca/desmarca como recebido (só o pago, sem mexer nos itens/total)
+  async function alternarPago(orc: Orcamento) {
+    if (alternandoPagoId) return;
+    try {
+      setAlternandoPagoId(orc.id);
+      const resp = await apiFetch(`${API}/${orc.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pago: !orc.pago }),
+      });
+      const dados = await lerJsonSeguro(resp);
+      if (!resp.ok) {
+        toast.error(dados.message || "Não foi possível atualizar o pagamento.");
+        return;
+      }
+      setOrcamentos((atual) =>
+        atual.map((o) => (o.id === orc.id ? { ...o, pago: !orc.pago } : o)),
+      );
+      toast.success(!orc.pago ? "Marcado como recebido!" : "Voltou para pendente.");
+    } catch {
+      toast.error("Erro de conexão ao atualizar o pagamento.");
+    } finally {
+      setAlternandoPagoId(null);
+    }
+  }
+
   async function confirmarExclusao() {
     if (!idParaExcluir) return;
     try {
@@ -510,7 +584,10 @@ export default function Orcamentos() {
   }
 
   const mostrandoBusca =
-    buscaDebounced !== "" || filtroStatus !== "todos" || alerta !== null;
+    buscaDebounced !== "" ||
+    filtroStatus !== "todos" ||
+    filtroPagamento !== "todos" ||
+    alerta !== null;
 
   return (
     <div>
@@ -546,8 +623,8 @@ export default function Orcamentos() {
         </div>
       )}
 
-      {/* Busca + filtro */}
-      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_200px]">
+      {/* Busca + filtros */}
+      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_200px_180px]">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -580,6 +657,16 @@ export default function Orcamentos() {
               {op.rotulo}
             </option>
           ))}
+        </select>
+        <select
+          value={filtroPagamento}
+          onChange={(e) => setFiltroPagamento(e.target.value)}
+          aria-label="Filtrar por pagamento"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+        >
+          <option value="todos">Todos (pgto)</option>
+          <option value="recebido">Recebidos</option>
+          <option value="pendente">Pendentes</option>
         </select>
       </div>
 
@@ -614,6 +701,7 @@ export default function Orcamentos() {
             onClick={() => {
               setBusca("");
               setFiltroStatus("todos");
+              setFiltroPagamento("todos");
             }}
             className="mt-4 rounded-lg border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
           >
@@ -640,13 +728,14 @@ export default function Orcamentos() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full min-w-[760px] whitespace-nowrap text-left text-sm">
+          <table className="w-full min-w-[860px] whitespace-nowrap text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-5 py-3">Nº</th>
                 <th className="px-5 py-3">Cliente</th>
                 <th className="px-5 py-3">Total</th>
                 <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Pgto</th>
                 <th className="px-5 py-3">Data</th>
                 <th className="px-5 py-3 text-right">Ações</th>
               </tr>
@@ -658,9 +747,11 @@ export default function Orcamentos() {
                   orc={orc}
                   baixando={baixandoId === orc.id}
                   editando={editandoId === orc.id}
+                  alternandoPago={alternandoPagoId === orc.id}
                   onBaixar={baixarPdf}
                   onEditar={abrirEdicao}
                   onExcluir={pedirExclusao}
+                  onAlternarPago={alternarPago}
                 />
               ))}
             </tbody>

@@ -199,6 +199,7 @@ export const orcamentoCriarSchema = z.object({
   ),
   validade_dias: validadeSchema.optional(),
   itens: itensSchema,
+  pago: z.boolean({ error: "Pagamento inválido." }).optional(),
 });
 
 export const orcamentoAtualizarSchema = z
@@ -217,6 +218,7 @@ export const orcamentoAtualizarSchema = z
     ),
     validade_dias: validadeSchema.optional(),
     itens: itensSchema.optional(),
+    pago: z.boolean({ error: "Pagamento inválido." }).optional(),
   })
   .refine(
     (v) =>
@@ -226,7 +228,8 @@ export const orcamentoAtualizarSchema = z
       v.desconto !== undefined ||
       v.observacoes !== undefined ||
       v.validade_dias !== undefined ||
-      v.itens !== undefined,
+      v.itens !== undefined ||
+      v.pago !== undefined,
     { message: "Nada para atualizar.", path: [] },
   );
 

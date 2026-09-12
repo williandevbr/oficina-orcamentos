@@ -56,6 +56,8 @@ export interface Orcamento {
   observacoes?: string | null;
   validade_dias: number;
   created_at: string;
+  // Financeiro básico: false = pendente | true = recebido
+  pago?: boolean;
   // Junções que o servidor traz junto (podem não vir em toda rota)
   clientes?: Pick<
     Cliente,
