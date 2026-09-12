@@ -20,22 +20,22 @@ const ITENS_ORCAMENTO = [
 export default function Recursos(): React.JSX.Element {
   return (
     <section id="recursos">
-      <div className="mx-auto max-w-7xl px-6 py-20">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-6 lg:py-20">
         <Revelar className="max-w-2xl">
           <p className="text-sm font-semibold text-blue-300">O sistema</p>
-          <h2 className="mt-2 font-display text-[30px] font-bold tracking-tight text-white lg:text-[36px]">
+          <h2 className="mt-2 font-display text-[26px] font-bold tracking-tight text-white sm:text-[30px] lg:text-[36px]">
             Tudo da oficina num só lugar
           </h2>
-          <p className="mt-3 text-[16px] text-slate-300">
+          <p className="mt-2 text-[15px] text-slate-300 lg:mt-3 lg:text-[16px]">
             Orçamentos e clientes conectados — sem planilha no meio.
           </p>
         </Revelar>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-5">
+        <div className="mt-8 grid gap-4 sm:gap-6 lg:mt-12 lg:grid-cols-5">
           <Revelar className="lg:col-span-3" atraso={0}>
             <article
               id="orcamentos"
-              className="flex h-full scroll-mt-24 flex-col rounded-xl bg-white p-7 shadow-2xl lg:p-8"
+              className="flex h-full scroll-mt-24 flex-col rounded-xl bg-white p-5 shadow-2xl sm:p-7 lg:p-8"
             >
               <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-700">
                 <FileText className="h-5 w-5 text-white" aria-hidden="true" />
@@ -67,7 +67,7 @@ export default function Recursos(): React.JSX.Element {
           <Revelar className="lg:col-span-2" atraso={120}>
             <article
               id="clientes"
-              className="flex h-full scroll-mt-24 flex-col rounded-xl border border-white/10 bg-white/5 p-7 text-white lg:p-8"
+              className="flex h-full scroll-mt-24 flex-col rounded-xl border border-white/10 bg-white/5 p-5 text-white sm:p-7 lg:p-8"
             >
               <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/10">
                 <Users className="h-5 w-5 text-white" aria-hidden="true" />

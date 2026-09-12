@@ -69,7 +69,7 @@ export default function HeroVisual(): React.JSX.Element {
   const total = useContagem(TOTAL_CENTAVOS, 900, 1400);
 
   return (
-    <div className="relative" role="img" aria-label="Exemplo de orçamento Nº 0007 aprovado e recebido no OrcaPro">
+    <div className="relative mx-2 sm:mx-5" role="img" aria-label="Exemplo de orçamento Nº 0007 aprovado e recebido no OrcaPro">
       {/* Cartão principal */}
       <div
         className="animate-fade-up overflow-hidden rounded-2xl bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]"
@@ -117,7 +117,7 @@ export default function HeroVisual(): React.JSX.Element {
             style={{ animationDelay: "1050ms" }}
           >
             <span className="text-sm text-slate-500">Total do orçamento</span>
-            <span className="font-mono text-xl font-bold tabular-nums text-blue-800">
+            <span className="font-mono text-lg font-bold tabular-nums text-blue-800 sm:text-xl">
               {formatarMoeda(total)}
             </span>
           </div>
@@ -139,18 +139,18 @@ export default function HeroVisual(): React.JSX.Element {
 
       {/* Chip flutuante: WhatsApp */}
       <div
-        className="animate-fade-up absolute -top-7 right-2 sm:-right-5"
+        className="animate-fade-up absolute -top-6 right-0 sm:-top-7 sm:-right-5"
         style={{ animationDelay: "1300ms" }}
       >
-        <div className="animate-float flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 shadow-xl">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500">
-            <MessageCircle className="h-4 w-4 text-white" aria-hidden="true" />
+        <div className="animate-float flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-xl sm:gap-2.5 sm:px-4 sm:py-3">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 sm:h-8 sm:w-8">
+            <MessageCircle className="h-3.5 w-3.5 text-white sm:h-4 sm:w-4" aria-hidden="true" />
           </span>
           <span>
-            <span className="block text-xs font-semibold text-slate-900">
+            <span className="block text-[11px] font-semibold text-slate-900 sm:text-xs">
               PDF enviado
             </span>
-            <span className="block text-[11px] text-slate-500">
+            <span className="block text-[10px] text-slate-500 sm:text-[11px]">
               WhatsApp · agora mesmo
             </span>
           </span>
@@ -159,19 +159,19 @@ export default function HeroVisual(): React.JSX.Element {
 
       {/* Chip flutuante: pagamento */}
       <div
-        className="animate-fade-up absolute -bottom-7 left-2 sm:-left-5"
+        className="animate-fade-up absolute -bottom-6 left-0 sm:-bottom-7 sm:-left-5"
         style={{ animationDelay: "1500ms" }}
       >
         <div
-          className="animate-float flex items-center gap-2.5 rounded-xl bg-white px-4 py-3 shadow-xl"
+          className="animate-float flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-xl sm:gap-2.5 sm:px-4 sm:py-3"
           style={{ animationDelay: "-3s" }}
         >
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
           <span>
-            <span className="block font-mono text-xs font-bold text-slate-900">
+            <span className="block font-mono text-[11px] font-bold text-slate-900 sm:text-xs">
               R$ 1.240,00
             </span>
-            <span className="block text-[11px] text-slate-500">
+            <span className="block text-[10px] text-slate-500 sm:text-[11px]">
               marcado como recebido
             </span>
           </span>

@@ -58,23 +58,23 @@ const PASSOS = [
 export default function ComoFunciona(): React.JSX.Element {
   return (
     <section id="como-funciona">
-      <div className="mx-auto max-w-7xl px-6 py-20">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-6 lg:py-20">
         <Revelar>
           <p className="text-sm font-semibold text-blue-300">Fluxo completo</p>
-          <h2 className="mt-2 font-display text-[30px] font-bold tracking-tight text-white lg:text-[36px]">
+          <h2 className="mt-2 font-display text-[26px] font-bold tracking-tight text-white sm:text-[30px] lg:text-[36px]">
             Do cadastro ao recebimento em 5 passos
           </h2>
-          <p className="mt-3 max-w-2xl text-[16px] text-slate-300">
+          <p className="mt-2 max-w-2xl text-[15px] text-slate-300 lg:mt-3 lg:text-[16px]">
             Cada etapa é o que você realmente faz no sistema. Sem etapa
             inventada, sem redundância.
           </p>
         </Revelar>
 
-        <div className="mt-14 space-y-0">
+        <div className="mt-8 space-y-0 lg:mt-14">
           {PASSOS.map((passo, i) => (
             <Revelar key={passo.numero} atraso={i * 80}>
-              <div className="grid gap-6 border-b border-white/10 py-8 md:grid-cols-[120px_1fr] md:gap-10">
-                <span className="font-display text-[40px] font-extrabold leading-none text-white/10">
+              <div className="grid gap-3 border-b border-white/10 py-6 md:grid-cols-[120px_1fr] md:gap-10 md:py-8">
+                <span className="font-display text-[32px] font-extrabold leading-none text-white/10 md:text-[40px]">
                   {passo.numero}
                 </span>
                 <div>

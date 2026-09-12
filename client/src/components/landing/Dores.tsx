@@ -25,19 +25,19 @@ const GANHOS = [
 export default function Dores(): React.JSX.Element {
   return (
     <section aria-label="Saia do papel">
-      <div className="mx-auto max-w-7xl px-6 py-20">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-6 lg:py-20">
         <Revelar>
-          <h2 className="font-display text-[30px] font-bold tracking-tight text-white lg:text-[36px]">
+          <h2 className="font-display text-[26px] font-bold tracking-tight text-white sm:text-[30px] lg:text-[36px]">
             Saia do papel e do improviso
           </h2>
-          <p className="mt-3 max-w-xl text-[16px] text-slate-300">
+          <p className="mt-2 max-w-xl text-[15px] text-slate-300 lg:mt-3 lg:text-[16px]">
             O que muda na rotina da oficina com o sistema organizado.
           </p>
         </Revelar>
 
-        <div className="mx-auto mt-12 grid max-w-4xl gap-6 lg:grid-cols-2">
+        <div className="mx-auto mt-8 grid max-w-4xl gap-4 sm:gap-6 lg:mt-12 lg:grid-cols-2">
           <Revelar>
-            <div className="h-full rounded-xl border border-white/10 bg-white/5 p-7">
+            <div className="h-full rounded-xl border border-white/10 bg-white/5 p-5 sm:p-7">
               <p className="text-sm font-semibold text-slate-400">
                 Como é hoje na maioria das oficinas
               </p>
@@ -55,7 +55,7 @@ export default function Dores(): React.JSX.Element {
           </Revelar>
 
           <Revelar atraso={120}>
-            <div className="h-full rounded-xl bg-white p-7 shadow-2xl">
+            <div className="h-full rounded-xl bg-white p-5 shadow-2xl sm:p-7">
               <p className="text-sm font-semibold text-blue-700">
                 Com o OrcaPro, a mesma rotina
               </p>

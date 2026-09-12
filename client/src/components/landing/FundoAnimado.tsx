@@ -29,23 +29,23 @@ export default function FundoAnimado(): React.JSX.Element {
       {/* Base um tom mais clara: azul marinho → azul vivo */}
       <div className="absolute inset-0 bg-[linear-gradient(140deg,#10265e_0%,#1e3a8a_35%,#1e40af_65%,#2563eb_100%)]" />
 
-      {/* 4 manchas em ritmos rápidos e diferentes */}
-      <div className="absolute -top-40 left-[8%] h-[560px] w-[560px] animate-deriva rounded-full bg-blue-500/40 blur-3xl" />
+      {/* 4 manchas em ritmos rápidos e diferentes (menores no celular) */}
+      <div className="absolute -top-40 left-[8%] h-[360px] w-[360px] animate-deriva rounded-full bg-blue-500/40 blur-3xl sm:h-[560px] sm:w-[560px]" />
       <div
-        className="absolute right-[5%] top-[30%] h-[480px] w-[480px] animate-deriva rounded-full bg-cyan-400/25 blur-3xl"
+        className="absolute right-[5%] top-[30%] h-[300px] w-[300px] animate-deriva rounded-full bg-cyan-400/25 blur-3xl sm:h-[480px] sm:w-[480px]"
         style={{ animationDelay: "-3s", animationDuration: "7s" }}
       />
       <div
-        className="absolute -bottom-48 left-[25%] h-[520px] w-[520px] animate-deriva rounded-full bg-blue-400/25 blur-3xl"
+        className="absolute -bottom-48 left-[25%] h-[340px] w-[340px] animate-deriva rounded-full bg-blue-400/25 blur-3xl sm:h-[520px] sm:w-[520px]"
         style={{ animationDelay: "-5s", animationDuration: "9s" }}
       />
       <div
-        className="absolute -right-40 top-[8%] h-[420px] w-[420px] animate-deriva rounded-full bg-sky-300/20 blur-3xl"
+        className="absolute -right-40 top-[8%] h-[280px] w-[280px] animate-deriva rounded-full bg-sky-300/20 blur-3xl sm:h-[420px] sm:w-[420px]"
         style={{ animationDelay: "-1.5s", animationDuration: "11s" }}
       />
 
       {/* Brilho cônico girando devagar */}
-      <div className="absolute left-1/2 top-[-30%] h-[900px] w-[900px] -translate-x-1/2 animate-giro bg-[conic-gradient(from_0deg,transparent_0deg,rgba(147,197,253,0.10)_50deg,transparent_110deg,transparent_180deg,rgba(103,232,249,0.08)_240deg,transparent_300deg)] blur-2xl [mask-image:radial-gradient(circle,black_20%,transparent_65%)]" />
+      <div className="absolute left-1/2 top-[-30%] h-[600px] w-[600px] -translate-x-1/2 animate-giro bg-[conic-gradient(from_0deg,transparent_0deg,rgba(147,197,253,0.10)_50deg,transparent_110deg,transparent_180deg,rgba(103,232,249,0.08)_240deg,transparent_300deg)] blur-2xl [mask-image:radial-gradient(circle,black_20%,transparent_65%)] sm:h-[900px] sm:w-[900px]" />
 
       {/* Pontinhos subindo */}
       {PONTOS.map((ponto, i) => (

@@ -94,11 +94,11 @@ export default function Navbar(): React.JSX.Element {
                 {link.label}
               </a>
             ))}
-            <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-4">
+            <div className="mt-3 flex flex-col gap-2.5 border-t border-white/10 pt-4">
               <Link
                 to="/login"
                 onClick={closeMenu}
-                className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+                className="rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-white/10 active:scale-[0.99]"
               >
                 Entrar
               </Link>
@@ -106,7 +106,7 @@ export default function Navbar(): React.JSX.Element {
                 to="/login"
                 state={{ modo: "cadastrar" }}
                 onClick={closeMenu}
-                className="rounded-lg bg-blue-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 active:scale-[0.98]"
+                className="rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-500 active:scale-[0.99]"
               >
                 Cadastrar
               </Link>

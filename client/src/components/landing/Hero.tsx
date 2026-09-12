@@ -6,17 +6,17 @@ import HeroVisual from "./HeroVisual";
 export default function Hero(): React.JSX.Element {
   return (
     <section id="topo" className="relative">
-      <div className="mx-auto grid max-w-7xl gap-16 px-6 pb-24 pt-16 lg:grid-cols-[1.08fr_1fr] lg:items-center lg:pb-32 lg:pt-24">
+      <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-12 sm:px-6 lg:grid-cols-[1.08fr_1fr] lg:items-center lg:gap-16 lg:pb-32 lg:pt-24">
         <div>
           <h1
-            className="animate-fade-up font-display text-[42px] font-extrabold leading-[1.06] tracking-tight text-white lg:text-[58px]"
+            className="animate-fade-up font-display text-[34px] font-extrabold leading-[1.1] tracking-tight text-white sm:text-[42px] sm:leading-[1.06] lg:text-[58px]"
             style={{ animationDelay: "50ms" }}
           >
             Orçamentos profissionais para sua oficina
           </h1>
 
           <p
-            className="animate-fade-up mt-5 max-w-lg text-[17px] leading-relaxed text-slate-300"
+            className="animate-fade-up mt-4 max-w-lg text-[16px] leading-relaxed text-slate-300 lg:mt-5 lg:text-[17px]"
             style={{ animationDelay: "150ms" }}
           >
             Monte o orçamento com peças, serviços e mão de obra, gere o PDF
@@ -25,7 +25,7 @@ export default function Hero(): React.JSX.Element {
           </p>
 
           <div
-            className="animate-fade-up mt-8 flex flex-col gap-3 sm:flex-row"
+            className="animate-fade-up mt-7 flex flex-col gap-2.5 sm:flex-row sm:gap-3 lg:mt-8"
             style={{ animationDelay: "250ms" }}
           >
             <Link

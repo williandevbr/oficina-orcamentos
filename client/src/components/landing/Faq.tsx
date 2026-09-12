@@ -55,13 +55,13 @@ export default function Faq(): React.JSX.Element {
 
   return (
     <section id="faq">
-      <Revelar className="mx-auto max-w-3xl px-6 py-20">
+      <Revelar className="mx-auto max-w-3xl px-5 py-14 sm:px-6 lg:py-20">
         <p className="text-sm font-semibold text-blue-300">Perguntas frequentes</p>
-        <h2 className="mt-2 font-display text-[30px] font-bold tracking-tight text-white">
+        <h2 className="mt-2 font-display text-[26px] font-bold tracking-tight text-white sm:text-[30px]">
           O essencial sobre o acesso e o dia a dia
         </h2>
 
-        <div className="mt-10">
+        <div className="mt-8 lg:mt-10">
           {perguntas.map((item, indice) => {
             const estaAberto = aberto === indice;
             return (

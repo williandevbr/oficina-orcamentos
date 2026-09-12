@@ -14,7 +14,7 @@ const HELP_LINKS = [{ label: "FAQ", id: "faq" }] as const;
 export default function Footer(): React.JSX.Element {
   return (
     <footer className="border-t border-white/10">
-      <div className="mx-auto max-w-7xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6 lg:py-12">
         <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
           <p className="max-w-xs text-sm leading-relaxed text-slate-400">
             Sistema de gestão de orçamentos para oficinas mecânicas.

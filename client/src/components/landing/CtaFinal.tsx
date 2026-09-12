@@ -10,14 +10,14 @@ import Revelar from "./Revelar";
 export default function CtaFinal(): React.JSX.Element {
   return (
     <section>
-      <div className="mx-auto max-w-7xl px-6 py-20">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-6 lg:py-20">
         <Revelar>
-          <div className="rounded-2xl bg-white p-8 shadow-2xl sm:p-12">
+          <div className="rounded-2xl bg-white p-6 shadow-2xl sm:p-12">
             <div className="max-w-2xl">
-              <h2 className="font-display text-[30px] font-bold tracking-tight text-blue-950 lg:text-[36px]">
+              <h2 className="font-display text-[26px] font-bold tracking-tight text-blue-950 sm:text-[30px] lg:text-[36px]">
                 Organize sua oficina a partir de hoje
               </h2>
-              <p className="mt-3 text-[16px] leading-relaxed text-slate-600">
+              <p className="mt-2 text-[15px] leading-relaxed text-slate-600 lg:mt-3 lg:text-[16px]">
                 Crie sua conta, cadastre sua oficina e monte o primeiro orçamento
                 em minutos. Sem cartão, sem instalação.
               </p>
