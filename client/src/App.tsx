@@ -13,6 +13,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import ExigirLogin from "./components/ExigirLogin";
 import Sidebar from "./components/Sidebar";
 import Login from "./pages/Login";
+import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
 import Orcamentos from "./pages/Orcamentos";
@@ -128,13 +129,14 @@ export default function App() {
       <BrowserRouter>
         <Toaster richColors position="top-right" closeButton />
         <Routes>
-          {/* Página de login é pública */}
+          {/* Página inicial (landing) e login são públicas */}
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
 
           {/* Todas as demais páginas só abrem com login */}
           <Route element={<ExigirLogin />}>
             <Route element={<LayoutAutenticado />}>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/app" element={<Dashboard />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/orcamentos" element={<Orcamentos />} />
               <Route path="/catalogo" element={<Catalogo />} />

@@ -44,6 +44,7 @@ interface FormOrcamento {
   veiculo_id: string;
   status: StatusOrcamento;
   desconto: number | string;
+  mao_de_obra: number | string;
   observacoes: string;
   validade_dias: number | string;
   pago: boolean;
@@ -54,6 +55,7 @@ type CampoForm =
   | "veiculo_id"
   | "status"
   | "desconto"
+  | "mao_de_obra"
   | "observacoes"
   | "validade_dias"
   | "pago";
@@ -79,6 +81,38 @@ const itemVazio: ItemLinha = {
   valor_unitario: "",
   _key: "",
 };
+
+// A mão de obra é um item de serviço com descrição padrão.
+// O formulário mostra ela num campo próprio (facilita) e junta
+// com os outros itens só na hora de salvar — sem mudar o servidor.
+function normalizarDescricao(v: unknown): string {
+  return String(v || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+function ehItemMaoDeObra(item: { descricao?: unknown; tipo?: unknown }): boolean {
+  return item.tipo === "servico" && normalizarDescricao(item.descricao) === "mao de obra";
+}
+
+// Separa o valor da mão de obra dos demais itens (edição)
+function extrairMaoDeObra(itens?: OrcamentoItem[] | null): {
+  valor: number;
+  restantes: OrcamentoItem[];
+} {
+  if (!itens || itens.length === 0) return { valor: 0, restantes: [] };
+  let valor = 0;
+  const restantes = itens.filter((item) => {
+    if (ehItemMaoDeObra(item) && !(valor > 0)) {
+      valor = Number(item.valor_unitario) || 0;
+      return false;
+    }
+    return true;
+  });
+  return { valor, restantes };
+}
 
 function comChave(item: Partial<ItemLinha>): ItemLinha {
   return { ...itemVazio, ...item, _key: `${Date.now()}-${Math.random()}` };
@@ -112,23 +146,25 @@ export default function OrcamentoForm({
     return () => window.removeEventListener("keydown", aoTeclar);
   }, [onFechar]);
 
-  // Estado do formulário
+  // Estado do formulário (mão de obra vem separada na edição)
+  const maoInicial = extrairMaoDeObra(dadosIniciais?.orcamento_itens);
   const [form, setForm] = useState<FormOrcamento>({
     cliente_id: dadosIniciais?.cliente_id || "",
     veiculo_id: dadosIniciais?.veiculo_id || "",
     status: dadosIniciais?.status || "rascunho",
     desconto: dadosIniciais?.desconto ?? 0,
+    mao_de_obra: maoInicial.valor || "",
     observacoes: dadosIniciais?.observacoes || "",
     validade_dias: dadosIniciais?.validade_dias || 7,
     pago: dadosIniciais?.pago ?? false,
   });
 
   // Estado dos itens (cada um com chave estável para o React)
-  const [itens, setItens] = useState<ItemLinha[]>(
-    dadosIniciais?.orcamento_itens?.length
-      ? dadosIniciais.orcamento_itens.map(comChave)
-      : [comChave({})],
-  );
+  // A mão de obra não aparece na lista — ela tem campo próprio acima
+  const [itens, setItens] = useState<ItemLinha[]>(() => {
+    const lista = maoInicial.restantes;
+    return lista.length ? lista.map(comChave) : [comChave({})];
+  });
   const [erroLocal, setErroLocal] = useState("");
   // Qual linha está mostrando sugestões do catálogo (-1 = nenhuma)
   const [sugestaoAberta, setSugestaoAberta] = useState(-1);
@@ -147,6 +183,8 @@ export default function OrcamentoForm({
       setForm({ ...form, status: valor as StatusOrcamento });
     } else if (campo === "desconto") {
       setForm({ ...form, desconto: valor });
+    } else if (campo === "mao_de_obra") {
+      setForm({ ...form, mao_de_obra: valor });
     } else if (campo === "observacoes") {
       setForm({ ...form, observacoes: valor });
     } else {
@@ -210,23 +248,40 @@ export default function OrcamentoForm({
   }
 
   // Cálculo ao vivo (mesma regra do servidor)
-  const subtotal = itens.reduce(
+  // Peças e serviços somados por tipo + campo próprio da mão de obra
+  const subtotalPecas = itens.reduce(
     (soma, item) =>
       soma +
-      (Number(item.quantidade) || 0) * (Number(item.valor_unitario) || 0),
+      (item.tipo === "peca"
+        ? (Number(item.quantidade) || 0) * (Number(item.valor_unitario) || 0)
+        : 0),
     0,
   );
+  const subtotalServicos = itens.reduce(
+    (soma, item) =>
+      soma +
+      (item.tipo !== "peca"
+        ? (Number(item.quantidade) || 0) * (Number(item.valor_unitario) || 0)
+        : 0),
+    0,
+  );
+  const maoDeObraNum = Math.max(0, Number(form.mao_de_obra) || 0);
+  const subtotal = subtotalPecas + subtotalServicos + maoDeObraNum;
   const descontoNum = Math.max(0, Number(form.desconto) || 0);
   const total = Math.max(0, subtotal - descontoNum);
 
   function aoSubmeter(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErroLocal("");
-    if (itens.length === 0) {
-      setErroLocal("O orçamento precisa de pelo menos um item.");
-      return;
-    }
-    for (const item of itens) {
+    // Linhas totalmente vazias são ignoradas (vale orçamento só de mão de obra)
+    const itensValidos = itens.filter(
+      (item) =>
+        String(item.descricao || "").trim() !== "" ||
+        Number(item.quantidade) > 0 ||
+        Number(item.valor_unitario) > 0,
+    );
+    const lista = itensValidos.length > 0 ? itensValidos : itens;
+    for (const item of lista) {
       if (!item.descricao || !String(item.descricao).trim()) {
         setErroLocal("Todo item precisa de uma descrição.");
         return;
@@ -240,10 +295,37 @@ export default function OrcamentoForm({
         return;
       }
     }
+    if (!(maoDeObraNum >= 0)) {
+      setErroLocal("Valor da mão de obra inválido.");
+      return;
+    }
     if (descontoNum > subtotal) {
       setErroLocal(
         `Desconto não pode ser maior que o subtotal (${formatarMoeda(subtotal)}).`,
       );
+      return;
+    }
+    // A mão de obra vira um item de serviço na hora de salvar
+    // (o servidor e o PDF já entendem — sem mudar nada lá).
+    // Se o mecânico digitou "mão de obra" na lista, junta tudo num só.
+    const itensManuais = lista
+      .filter((item) => !ehItemMaoDeObra(item))
+      .map((item) => ({
+        descricao: String(item.descricao).trim(),
+        tipo: item.tipo,
+        quantidade: Number(item.quantidade) || 0,
+        valor_unitario: Number(item.valor_unitario) || 0,
+      }));
+    if (maoDeObraNum > 0) {
+      itensManuais.push({
+        descricao: "Mão de obra",
+        tipo: "servico" as const,
+        quantidade: 1,
+        valor_unitario: maoDeObraNum,
+      });
+    }
+    if (itensManuais.length === 0) {
+      setErroLocal("Adicione pelo menos um item ou a mão de obra.");
       return;
     }
     onSalvar({
@@ -257,12 +339,7 @@ export default function OrcamentoForm({
         365,
         Math.max(1, Number(form.validade_dias) || 7),
       ),
-      itens: itens.map((item) => ({
-        descricao: String(item.descricao).trim(),
-        tipo: item.tipo,
-        quantidade: Number(item.quantidade) || 0,
-        valor_unitario: Number(item.valor_unitario) || 0,
-      })),
+      itens: itensManuais,
     });
   }
 
@@ -564,22 +641,48 @@ export default function OrcamentoForm({
             />
           </div>
 
-          {/* Total + desconto */}
-          <div className="grid grid-cols-1 gap-4 rounded-xl bg-blue-50 p-4 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
-                Desconto (R$)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={form.desconto}
-                onChange={(e) => aoMudar("desconto", e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              />
+          {/* Mão de obra + desconto + totais */}
+          <div className="rounded-xl bg-blue-50 p-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Mão de obra (R$)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={form.mao_de_obra}
+                  onChange={(e) => aoMudar("mao_de_obra", e.target.value)}
+                  placeholder="Ex: 150"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Desconto (R$)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={form.desconto}
+                  onChange={(e) => aoMudar("desconto", e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
             </div>
-            <div className="sm:col-span-2 flex flex-col justify-center text-right">
+            <div className="mt-3 space-y-1 text-right">
+              <p className="text-sm text-slate-600">
+                Peças:{" "}
+                <span className="font-semibold">{formatarMoeda(subtotalPecas)}</span>
+              </p>
+              <p className="text-sm text-slate-600">
+                Mão de obra:{" "}
+                <span className="font-semibold">
+                  {formatarMoeda(subtotalServicos + maoDeObraNum)}
+                </span>
+              </p>
               <p className="text-sm text-slate-600">
                 Subtotal:{" "}
                 <span className="font-semibold">{formatarMoeda(subtotal)}</span>

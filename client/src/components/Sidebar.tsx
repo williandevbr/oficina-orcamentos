@@ -17,7 +17,7 @@ import { useAuth } from "../contexts/AuthContext";
 // Lista de itens do menu.
 // Cada item tem: o caminho (to), o texto (label) e um ícone.
 const links: { to: string; label: string; icon: LucideIcon }[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/app", label: "Dashboard", icon: LayoutDashboard },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/catalogo", label: "Catálogo", icon: Package },
   { to: "/orcamentos", label: "Orçamentos", icon: FileText },
@@ -101,7 +101,7 @@ export default function Sidebar({
           <NavLink
             key={link.to}
             to={link.to}
-            end={link.to === "/"}
+            end={link.to === "/app"}
             onClick={aoFechar}
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${

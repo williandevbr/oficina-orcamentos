@@ -1,40 +1,35 @@
 import { useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import {
-  Wrench,
-  Mail,
-  Lock,
-  LogIn,
-  UserPlus,
-  KeyRound,
-  Loader2,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import type { FormEvent } from "react";
+import { Link, Navigate, useLocation } from "react-router-dom";
+import { Wrench } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import LoginForm from "../components/LoginForm";
 
 // ============================================================
 // Tela de LOGIN / CRIAR CONTA
 // ============================================================
-// Duas abas: "Entrar" para quem já tem conta e
-// "Criar conta" para o primeiro acesso.
+// Cartão branco centralizado sobre gradiente azul animado.
+// Sem painel lateral: a mesma composição no celular e no
+// computador. A lógica de autenticação fica aqui; o visual
+// do formulário está em LoginForm.
 // ============================================================
 
-const abas = [
-  { id: "entrar", label: "Entrar", icon: LogIn },
-  { id: "cadastrar", label: "Criar conta", icon: UserPlus },
-] as const;
-
-type AbaId = (typeof abas)[number]["id"];
+type Modo = "entrar" | "cadastrar";
 
 export default function Login() {
   const { usuario, carregandoSessao, entrar, cadastrar, recuperarSenha } =
     useAuth();
   const location = useLocation();
   const destino =
-    (location.state as { from?: string } | null)?.from || "/";
+    (location.state as { from?: string } | null)?.from || "/app";
 
-  const [aba, setAba] = useState<AbaId>("entrar");
+  const [modo, setModo] = useState<Modo>(() => {
+    // Quem vem da landing escolhe direto: Cadastrar ou Entrar
+    const peloEstado = (location.state as { modo?: Modo } | null)?.modo;
+    if (peloEstado === "cadastrar" || peloEstado === "entrar") return peloEstado;
+    const pelaUrl = new URLSearchParams(location.search).get("modo");
+    return pelaUrl === "cadastrar" ? "cadastrar" : "entrar";
+  });
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -47,14 +42,14 @@ export default function Login() {
     return <Navigate to={destino} replace />;
   }
 
-  async function aoEnviar(e: React.FormEvent<HTMLFormElement>) {
+  async function aoEnviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMsgErro("");
     setMsgOk("");
     setOcupado(true);
 
     try {
-      if (aba === "entrar") {
+      if (modo === "entrar") {
         await entrar(email.trim(), senha);
       } else {
         const resultado = await cadastrar(email.trim(), senha);
@@ -64,7 +59,7 @@ export default function Login() {
             "Conta criada! Enviamos um e-mail de confirmação. Abra sua caixa de entrada, clique no link e depois entre com seus dados.",
           );
           setSenha("");
-          setAba("entrar");
+          setModo("entrar");
         }
       }
     } catch (erro) {
@@ -92,148 +87,61 @@ export default function Login() {
     }
   }
 
+  function trocarModo(novo: Modo) {
+    setModo(novo);
+    setMsgErro("");
+    setMsgOk("");
+    setMostrarSenha(false);
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-950 via-blue-900 to-blue-700 p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="mb-6 flex flex-col items-center gap-2 text-white">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
-            <Wrench className="h-7 w-7" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">OrcaPro</h1>
-          <p className="text-sm text-blue-200">Acesso restrito à equipe</p>
-        </div>
-
-        {/* Cartão */}
-        <div className="rounded-2xl bg-white p-8 shadow-2xl">
-          {/* Abas */}
-          <div className="mb-6 grid grid-cols-2 gap-1 rounded-xl bg-blue-50 p-1">
-            {abas.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setAba(item.id);
-                  setMsgErro("");
-                  setMsgOk("");
-                }}
-                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                  aba === item.id
-                    ? "bg-blue-600 text-white shadow"
-                    : "text-blue-700 hover:bg-blue-100"
-                }`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={aoEnviar} className="space-y-4">
-            {/* E-mail */}
-            <div>
-              <label
-                htmlFor="login-email"
-                className="mb-1 block text-sm font-medium text-slate-700"
-              >
-                E-mail
-              </label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="voce@oficina.com"
-                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                />
-              </div>
-            </div>
-
-            {/* Senha */}
-            <div>
-              <label
-                htmlFor="login-senha"
-                className="mb-1 block text-sm font-medium text-slate-700"
-              >
-                Senha
-              </label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  id="login-senha"
-                  name="password"
-                  type={mostrarSenha ? "text" : "password"}
-                  required
-                  minLength={6}
-                  autoComplete={
-                    aba === "entrar" ? "current-password" : "new-password"
-                  }
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-10 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => setMostrarSenha((v) => !v)}
-                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600"
-                >
-                  {mostrarSenha ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {msgErro && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {msgErro}
-              </div>
-            )}
-
-            {msgOk && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {msgOk}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={ocupado}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-blue-700 disabled:opacity-60"
-            >
-              {ocupado ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <KeyRound className="h-4 w-4" />
-              )}
-              {aba === "entrar" ? "Entrar no sistema" : "Criar minha conta"}
-            </button>
-          </form>
-
-          {aba === "entrar" && (
-            <button
-              type="button"
-              onClick={aoRecuperarSenha}
-              className="mt-4 w-full text-center text-xs font-medium text-blue-600 hover:text-blue-800"
-            >
-              Esqueci minha senha
-            </button>
-          )}
-        </div>
-
-        <p className="mt-6 text-center text-xs text-blue-200">
-          OrcaPro — sistema de orçamentos para oficinas
-        </p>
+    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-blue-950 px-4 py-10">
+      {/* Gradiente azul animado de fundo */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#172554_0%,#1e3a8a_50%,#1d4ed8_100%)]" />
+        <div className="absolute -top-32 left-[12%] h-[420px] w-[420px] animate-deriva rounded-full bg-blue-500/30 blur-3xl" />
+        <div
+          className="absolute -bottom-32 right-[8%] h-[380px] w-[380px] animate-deriva rounded-full bg-cyan-400/20 blur-3xl"
+          style={{ animationDelay: "-8s" }}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_40%,black_20%,transparent_75%)]" />
       </div>
+
+      <main className="relative w-full max-w-[440px]">
+        <div className="animate-fade-up rounded-2xl bg-white p-8 shadow-2xl sm:p-10">
+          {/* Marca centralizada no topo do cartão */}
+          <div className="mb-8 flex items-center justify-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-700">
+              <Wrench className="h-5 w-5 text-white" />
+            </span>
+            <span className="font-display text-xl font-bold tracking-tight text-blue-950">
+              OrcaPro
+            </span>
+          </div>
+
+          <LoginForm
+            modo={modo}
+            email={email}
+            senha={senha}
+            mostrarSenha={mostrarSenha}
+            msgErro={msgErro}
+            msgOk={msgOk}
+            ocupado={ocupado}
+            onEmail={setEmail}
+            onSenha={setSenha}
+            onMostrarSenha={() => setMostrarSenha((v) => !v)}
+            onTrocarModo={trocarModo}
+            onEnviar={aoEnviar}
+            onRecuperarSenha={aoRecuperarSenha}
+          />
+        </div>
+
+        <p className="mt-6 text-center text-sm text-blue-200/70">
+          <Link to="/" className="transition-colors hover:text-white">
+            ← Voltar ao início
+          </Link>
+        </p>
+      </main>
     </div>
   );
 }

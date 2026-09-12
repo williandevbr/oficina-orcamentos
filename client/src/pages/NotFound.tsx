@@ -18,7 +18,7 @@ export default function NotFound() {
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Link
-            to="/"
+            to="/app"
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-blue-700"
           >
             Voltar ao Dashboard
